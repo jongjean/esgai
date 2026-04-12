@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- SNS 공유 메타 태그 -->
+    <meta property="og:title" content="AI-ESG 평가보고서(템플릿) 받기">
+    <meta property="og:description" content="[한국ESG학회]">
+    <meta property="og:image" content="https://uconai.ddns.net/esgai/og_image.jpg?v=3">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://uconai.ddns.net/esgai/">
+    <title>ESG AI Platform | 한국ESG학회</title>
+    <style>
+        :root {
+            --primary: #4ADE80;
+            --primary-hover: #22C55E;
+            --secondary: #3498DB;
+            --bg-dark: #0F172A;
+            --card-bg: #1E293B;
+            --glass: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        html, body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            margin: 0; padding: 0; width: 100%; overflow-x: hidden;
+        }
+
+        body { display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+
+        header {
+            width: 100%; padding: 0.8rem 2rem; display: flex; align-items: center; justify-content: space-between;
+            background: var(--glass); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); box-sizing: border-box;
+        }
+
+        .logo-text {
+            font-size: 1.5rem; font-weight: 800;
+            background: linear-gradient(to right, var(--primary), #3498DB);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .hero { padding: 3rem 2rem; text-align: center; width: 100%; flex: 1; display: flex; flex-direction: column; align-items: center; }
+
+        .catchphrase { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; line-height: 1.4; word-break: keep-all; }
+        .catchphrase span { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        .card {
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+            padding: 2.5rem; border-radius: 2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            width: 100%; max-width: 500px; box-sizing: border-box;
+        }
+
+        .form-group { margin-bottom: 1.2rem; text-align: left; }
+        label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: #94A3B8; }
+        input, select {
+            width: 100%; padding: 0.9rem; border-radius: 0.8rem; border: 1px solid var(--glass-border);
+            background: #0F172A; color: white; font-size: 1rem; box-sizing: border-box;
+            outline: none;
+        }
+        select option {
+            background: #1E293B;
+            color: white;
+        }
+
+        button {
+            width: 100%; padding: 1.1rem; border: none; border-radius: 0.8rem;
+            background: var(--primary); color: #000; font-weight: 900; font-size: 1.15rem;
+            cursor: pointer; transition: 0.3s; margin-top: 1rem;
+        }
+        button:hover { transform: scale(1.02); box-shadow: 0 0 25px var(--primary); }
+
+        .btn-start {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        }
+
+        #draftContent, #deepContent {
+            white-space: pre-wrap; text-align: left; background: rgba(0,0,0,0.25);
+            padding: 18px; border-radius: 12px; border: 1px solid var(--glass-border);
+            line-height: 1.7; font-size: 0.875rem; color: #E2E8F0; margin-top: 10px;
+        }
+
+        footer {
+            width: 100%; padding: 3rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;
+            opacity: 0.7; font-size: 0.8rem; text-align: center;
+        }
+
+        .kesgai-info { 
+            color: #000000 !important; font-weight: bold; cursor: help; text-decoration: none;
+            position: relative; 
+        }
+        .kesgai-info:hover {
+            text-decoration: underline;
+        }
+        .kesgai-info:hover::after {
+            content: "'KESGAI'는 'Korea ESG Association AI'이며\A한국ESG학회가 개발한 인공지능 ESG분석 엔진입니다.";
+            position: absolute;
+            bottom: 150%; left: 50%; transform: translateX(-50%);
+            background: #0F172A;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--primary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10000;
+            width: max-content;
+            pointer-events: none;
+        }
+        /* 화살표 추가 */
+        .kesgai-info:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 130%; left: 50%; transform: translateX(-50%);
+            border-width: 8px 8px 0 8px;
+            border-style: solid;
+            border-color: var(--primary) transparent transparent transparent;
+            z-index: 10000;
+        }
+
+        @media (max-width: 768px) {
+            .catchphrase { font-size: 1.5rem; }
+            .card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="./logo.png" alt="Logo" style="height: 40px;" onerror="this.style.display='none'">
+            <div class="logo-text">ESG경영 AI가이드 Platform</div>
+        </div>
+        <img src="./footer_logo.png" alt="Association Logo" style="height: 35px; opacity: 0.9;" onerror="this.style.display='none'">
+    </header>
+
+    <main class="hero">
+        <!-- 메인 로고 영역 (재복구) -->
+        <div style="margin-bottom: 30px; text-align: center; width: 100%; display: flex; justify-content: center;">
+            <img src="./logo.png" alt="Main ESG Logo" style="max-height: 240px; display: block;" onerror="this.style.display='none'">
+        </div>
+
+        <div class="catchphrase">
+            "나-너, 회사-사회의 가치를 아신다면 <br>
+            <span>이미 당신은 ESG실천가 입니다.</span>"
+        </div>
+
+        <div class="card">
+            <!-- 인사말 섹션 (분석 시작 시 숨김 처리됨) -->
+            <div id="home-greeting" style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 25px; line-height: 1.5;">
+                아래 3칸만 입력하시고, 한국ESG학회가 제공하는<br>귀사(기관) 맞춤형 AI-ESG 평가보고서 템플릿을 받으세요
+            </div>
+
+            <!-- 입력 섹션 -->
+            <div id="input-view">
+                <div id="step1-input">
+                    <div class="form-group">
+                        <label>기업 명칭</label>
+                        <input type="text" id="company_name" placeholder="예: ESG미래">
+                    </div>
+                    <div class="form-group">
+                        <label>산업 분야</label>
+                        <select id="industry">
+                            <option value="제조업">제조업</option>
+                            <option value="건설업">건설업</option>
+                            <option value="서비스업">서비스업</option>
+                            <option value="정보통신업">정보통신업</option>
+                            <option value="그외">그외</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>기업 규모</label>
+                        <select id="size">
+                            <option value="SME">중소기업</option>
+                            <option value="Mid-Market">중견기업</option>
+                            <option value="Enterprise">대기업</option>
+                            <option value="NGO">비영리기관</option>
+                            <option value="Other">기타(그외)</option>
+                        </select>
+                    </div>
+                    <button class="btn-start" onclick="startAnalysis()">
+                        <strong><span class="kesgai-info">KESGAI</span> AI 엔진 START</strong>
+                        <span style="font-size: 0.7rem; font-weight: normal; opacity: 0.8;">(실시간 ESG경영 초안 생성)</span>
+                    </button>
+                </div>
+
+                <!-- 2단계 입력창 (동적 생성) -->
+                <div id="step2-input" style="display:none;">
+                    <div style="font-size: 0.85rem; color: #E2E8F0; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.2); padding: 12px; border-radius: 8px;">
+                        기업의 실제 현황을 선택하시면<br><strong style="color:var(--secondary);">맞춤형 ESG 보고서 템플릿</strong>이 완성됩니다.
+                    </div>
+                    <div id="questions-container" style="padding-bottom: 20px;"></div>
+                    <button onclick="submitStep2()" style="background: linear-gradient(135deg, #10B981, #059669); color: #fff;">✨ 맞춤형 보고서 생성하기</button>
+                </div>
+            </div>
+
+            <!-- 로딩 섹션 -->
+            <div id="loading-view" style="display:none; padding: 30px 10px;">
+                <h3 id="loading-title" style="color: var(--primary); margin-bottom: 20px;">분석 엔진 가동 중...</h3>
+                <div style="width: 100%; background: rgba(255,255,255,0.1); height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 15px;">
+                    <div id="loading-progress" style="width: 0%; height: 100%; background: var(--secondary); transition: width 0.5s ease;"></div>
+                </div>
+                <div id="loading-desc" style="font-size: 0.85rem; margin-bottom: 10px;">AI가 입력을 분석하고 있습니다.</div>
+                <div style="font-size: 0.75rem; color: #94A3B8;">경과 시간: <span id="loading-timer">0</span>초 / 최대 3분</div>
+            </div>
+
+            <!-- 결과 섹션 -->
+            <div id="result-view" style="display:none;">
+                <!-- 에러 박스 -->
+                <div id="error-box" style="display:none; padding: 20px;">
+                    <p style="color: #EF4444; font-weight: bold;">⚠️ 시스템 오류 발생</p>
+                    <p id="error-msg" style="font-size: 0.85rem; color: #E2E8F0;"></p>
+                    <button onclick="restartAnalysis()" style="background: #334155; color: #fff; margin-top: 20px;">다시 시도하기</button>
+                </div>
+
+                <!-- 1단계 결과 (초안) -->
+                <div id="step1-result" style="display:none;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
+                        <button id="translateBtn" onclick="toggleTranslation()" style="width: auto; padding: 6px 14px; font-size: 0.8rem; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border); border-radius: 20px;">🌐 한글 번역 보기</button>
+                        <div id="translate-progress-container" style="display: none; width: 100%; max-width: 250px; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                            <div id="translate-progress" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <pre id="draftContent"></pre>
+                    <div style="margin: 20px 0; text-align: left; font-size: 0.9rem;">
+                        <strong style="color: var(--primary);">✅ 단계별 초안 작성이 완료되었습니다.</strong>
+                    </div>
+                    <button id="btn-next-step" onclick="showStep2Form()" style="background: var(--secondary); color: #fff; display: none;">다음 단계 (맞춤형 보고서 생성)</button>
+                    <button onclick="restartAnalysis()" style="background: transparent; border: 1px solid #94A3B8; color: #94A3B8; margin-top: 10px;">초기화 후 처음으로</button>
+                </div>
+
+                <!-- 2단계 결과 (최종) -->
+                <div id="step3-result" style="display:none;">
+                    <h3 style="color: var(--primary);">최종 맞춤형 리포트</h3>
+                    <pre id="deepContent"></pre>
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <a id="download-docx" href="#" download style="flex:1; background: #2B579A; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center;">DOCX 다운로드</a>
+                        <a id="download-pdf" href="#" download style="flex:1; background: #C4302B; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center;">PDF 다운로드</a>
+                    </div>
+                    <button onclick="restartAnalysis()" style="background: #334155; color: #fff; margin-top: 15px;">처음으로 돌아가기</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <img src="./footer_logo.jpg" alt="Footer Logo" style="height: 50px; background: white; padding: 5px 15px; border-radius: 8px;" onerror="this.style.display='none'">
+        <div>&copy; 한국ESG학회 AI SaaS Platform. All Rights Reserved.</div>
+    </footer>
+
+    <script>
+        const UI_STATE = {
+            IDLE_STEP1: 'idle_1', LOADING_STEP1: 'loading_1', DONE_STEP1: 'done_1',
+            IDLE_STEP2: 'idle_2', LOADING_STEP2: 'loading_2', DONE_STEP2: 'done_2', ERROR: 'error'
+        };
+
+        const Q_DATA = [
+            { id: 'env', title: '1. [환경] 생활 속 실천', opts: ['종이 줄이기','재활용 철저','전기 절약','텀블러'] },
+            { id: 'ene', title: '2. [에너지] 탄소 절감', opts: ['LED 사용','퇴근 절전','실내 온도','냉난방 관리'] },
+            { id: 'wel', title: '3. [복지] 직원 건강', opts: ['식대 제공','자유 휴가','건강검진','간식 제공'] },
+            { id: 'soc', title: '4. [사회] 지역 상생', opts: ['기부','지역 업체','인재 채용','행사 참여'] },
+            { id: 'gov', title: '5. [거버넌스] 투명 경영', opts: ['정직 거래','투명 운영','의견 반영','청렴 경영'] }
+        ];
+
+        let currentState = UI_STATE.IDLE_STEP1;
+        let abortController = null, timerInterval = null, isCompleted = false;
+        let timerSec = 0, globalJobId = null, companyGlobal = "";
+
+        function setState(nextState, errorMsg = "") {
+            currentState = nextState;
+            const greeting = document.getElementById('home-greeting');
+            if (greeting) greeting.style.display = (nextState === UI_STATE.IDLE_STEP1) ? 'block' : 'none';
+
+            const vInput = document.getElementById('input-view');
+            const vLoading = document.getElementById('loading-view');
+            const vResult = document.getElementById('result-view');
+            const boxError = document.getElementById('error-box');
+
+            [vInput, vLoading, vResult, boxError].forEach(el => { if(el) el.style.display = 'none'; });
+            ['step1-input', 'step2-input', 'step1-result', 'step3-result'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.style.display = 'none';
+            });
+
+            if (nextState === UI_STATE.IDLE_STEP1) {
+                if(vInput) vInput.style.display = 'block';
+                document.getElementById('step1-input').style.display = 'block';
+            } else if (nextState === UI_STATE.LOADING_STEP1) {
+                if(vLoading) vLoading.style.display = 'block';
+            } else if (nextState === UI_STATE.DONE_STEP1) {
+                if(vResult) vResult.style.display = 'block';
+                document.getElementById('step1-result').style.display = 'block';
+            } else if (nextState === UI_STATE.IDLE_STEP2) {
+                if(vInput) vInput.style.display = 'block';
+                document.getElementById('step2-input').style.display = 'block';
+            } else if (nextState === UI_STATE.LOADING_STEP2) {
+                if(vLoading) vLoading.style.display = 'block';
+            } else if (nextState === UI_STATE.DONE_STEP2) {
+                if(vResult) vResult.style.display = 'block';
+                document.getElementById('step3-result').style.display = 'block';
+            } else if (nextState === UI_STATE.ERROR) {
+                if(vResult) vResult.style.display = 'block';
+                if(boxError) boxError.style.display = 'block';
+                document.getElementById('error-msg').innerText = errorMsg;
+            }
+        }
+
+        const M1 = ["ESG초안 생성 중...", "업종 기준 적용 중...", "KESGAI 항목 구성 중...", "정책 초안 생성 중...", "보고서 정리 중..."];
+        
+        function startTimer(stage) {
+            stopTimer(); 
+            timerSec = 0;
+            const timerEl = document.getElementById('loading-timer');
+            const progEl = document.getElementById('loading-progress');
+            const titleEl = document.getElementById('loading-title'); 
+            const descEl = document.getElementById('loading-desc');
+            
+            const kesgaiSpan = '<span class="kesgai-info">KESGAI</span>';
+
+            if(stage === 1) {
+                if(titleEl) titleEl.innerHTML = `'<span style="color:var(--primary);">${companyGlobal}</span>' ` + M1[0].replace('KESGAI', kesgaiSpan);
+                if(descEl) descEl.innerText = "온라인 스크랩 정보를 기반으로 초도 작업을 진행합니다.";
+            } else {
+                if(titleEl) titleEl.innerHTML = "맞춤형 보고서 분석 생성 중...";
+                if(descEl) descEl.innerText = "귀사가 입력한 상세 현황을 통합 매핑하고 있습니다.";
+            }
+            
+            timerInterval = setInterval(() => {
+                timerSec++;
+                if(timerEl) timerEl.innerText = timerSec;
+                if(progEl) progEl.style.width = Math.min((timerSec/120)*100, 95) + '%';
+                
+                if (stage === 1 && timerSec % 15 === 0) {
+                    const msg = M1[Math.floor(timerSec / 15) % M1.length];
+                    let finalMsg = msg.replace('KESGAI', kesgaiSpan);
+                    if (msg === M1[0] || finalMsg.includes('ESG초안')) {
+                        finalMsg = `'<span style="color:var(--primary);">${companyGlobal}</span>' ` + finalMsg;
+                    }
+                    if(titleEl) titleEl.innerHTML = finalMsg;
+                }
+            }, 1000);
+        }
+        function stopTimer() { if(timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+        async function startAnalysis() {
+            const name = document.getElementById('company_name').value;
+            if(!name) return alert('기업 명칭을 입력해 주세요.');
+            companyGlobal = name;
+            const data = { 
+                company_name: name, 
+                industry: document.getElementById('industry').value, 
+                size: document.getElementById('size').value 
+            };
+            
+            if(abortController) abortController.abort();
+            abortController = new AbortController();
+            isCompleted = false;
+            setState(UI_STATE.LOADING_STEP1);
+            startTimer(1);
+
+            try {
+                const res = await fetch('./api/analyze', { 
+                    method:'POST', headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify(data), signal:abortController.signal 
+                });
+                const json = await res.json();
+                globalJobId = json.job_id;
+                startPolling(1, globalJobId);
+            } catch(e) { if(e.name !== 'AbortError') setState(UI_STATE.ERROR, '분석 요청 중 오류가 발생했습니다.'); }
+        }
+
+        async function startPolling(stage, jobId) {
+            const poll = async () => {
+                if(isCompleted) return;
+                try {
+                    const res = await fetch(stage === 1 ? `./api/status/${jobId}` : `./api/status/deep/${jobId}`);
+                    const data = await res.json();
+                    if(data.status === 'done') {
+                        stage === 1 ? handleSuccess1(data.report) : handleSuccess2(data);
+                    } else if(data.status === 'failed') {
+                        setState(UI_STATE.ERROR, '분석 처리 중 실패했습니다.');
+                    } else {
+                        setTimeout(poll, 3000);
+                    }
+                } catch(e) { setTimeout(poll, 3000); }
+            };
+            poll();
+        }
+
+        function handleSuccess1(report) {
+            isCompleted = true; stopTimer();
+            const content = report.raw_report || report;
+            window.esgDraft = content;
+            document.getElementById('draftContent').innerText = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+            document.getElementById('btn-next-step').style.display = 'none';
+            setState(UI_STATE.DONE_STEP1);
+        }
+
+        function handleSuccess2(data) {
+            isCompleted = true; stopTimer();
+            document.getElementById('deepContent').innerText = data.preview || '내용을 불러올 수 없습니다.';
+            document.getElementById('download-docx').href = './downloads/' + data.dist_docx;
+            document.getElementById('download-pdf').href = './downloads/' + data.dist_pdf;
+            setState(UI_STATE.DONE_STEP2);
+        }
+
+        function showStep2Form() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = Q_DATA.map(q => `
+                <div style="margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px;">
+                    <label style="color: #FFFFFF; font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; display: block;">${q.title}</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        ${q.opts.map(opt => `
+                            <label style="display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                                <input type="checkbox" name="q_${q.id}" value="${opt}" style="margin-right: 8px; width: 14px; height: 14px;"> ${opt}
+                            </label>`).join('')}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="text" id="q_${q.id}_other" placeholder="기타(직접 입력)" style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 12px; font-size: 0.8rem; border-radius: 6px; color: white;">
+                        <label style="font-size: 0.75rem; color: var(--primary); cursor: pointer;"><input type="checkbox" id="q_${q.id}_planned" style="margin-right: 5px;"> 도입 예정</label>
+                    </div>
+                </div>
+            `).join('');
+            setState(UI_STATE.IDLE_STEP2);
+        }
+
+        async function submitStep2() {
+            const answers = {};
+            Q_DATA.forEach(q => {
+                let col = Array.from(document.querySelectorAll(`input[name="q_${q.id}"]:checked`)).map(c=>c.value);
+                const other = document.getElementById(`q_${q.id}_other`).value;
+                if(other) col.push(other);
+                const planned = document.getElementById(`q_${q.id}_planned`).checked;
+                let txt = col.join(', ');
+                if (planned) txt = txt ? txt + " (향후 도입 예정)" : "도입 예정";
+                answers[q.id] = txt || '미기재';
+            });
+
+            const data = {
+                job_id: globalJobId,
+                company_name: document.getElementById('company_name').value,
+                industry: document.getElementById('industry').value,
+                size: document.getElementById('size').value,
+                required: answers
+            };
+
+            isCompleted = false; setState(UI_STATE.LOADING_STEP2); startTimer(2);
+            try {
+                await fetch('./api/analyze/deep', { 
+                    method:'POST', headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify(data) 
+                });
+                startPolling(2, globalJobId);
+            } catch(e) { setState(UI_STATE.ERROR, '심층 분석 데이터 전달 실패'); }
+        }
+
+        function restartAnalysis() { window.location.reload(); }
+
+        async function toggleTranslation() {
+            const btn = document.getElementById('translateBtn');
+            const content = document.getElementById('draftContent');
+            const nextBtn = document.getElementById('btn-next-step');
+            
+            if(!window.esgDraftKorean) {
+                // 한글판이 아직 없으면 AI 생성 (최초 1회)
+                btn.innerText = `⌛ '${companyGlobal}'의 ESG보고서 생성 중...`;
+                const progBox = document.getElementById('translate-progress-container');
+                const progBar = document.getElementById('translate-progress');
+                if(progBox) progBox.style.display = 'block';
+                
+                let p = 0;
+                const pInterval = setInterval(() => {
+                    p = Math.min(p + 5, 95);
+                    if(progBar) progBar.style.width = p + '%';
+                }, 500);
+
+                try {
+                    const res = await fetch('./api/translate', { 
+                        method:'POST', headers:{'Content-Type':'application/json'}, 
+                        body:JSON.stringify({text:window.esgDraft, company_name:companyGlobal}) 
+                    });
+                    const data = await res.json();
+                    window.esgDraftKorean = data.translated_text;
+                    
+                    clearInterval(pInterval);
+                    if(progBar) progBar.style.width = '100%';
+                    setTimeout(() => { if(progBox) progBox.style.display = 'none'; }, 500);
+
+                    content.innerText = window.esgDraftKorean;
+                    btn.innerText = '🌐 원문 보기(English)';
+                    if(nextBtn) nextBtn.style.display = 'block'; // 한글 생성 후 다음 단계 버튼 노출
+                } catch(e) { 
+                    clearInterval(pInterval);
+                    if(progBox) progBox.style.display = 'none';
+                    btn.innerText = '🌐 한글 번역 보기'; 
+                    alert('번역 중 오류가 발생했습니다.');
+                }
+            } else {
+                // 이미 한글판이 있으면 단순 토글 (AI 호출 없음)
+                if(btn.innerText.includes('한글')) {
+                    content.innerText = window.esgDraftKorean;
+                    btn.innerText = '🌐 원문 보기(English)';
+                    if(nextBtn) nextBtn.style.display = 'block';
+                } else {
+                    content.innerText = typeof window.esgDraft === 'string' ? window.esgDraft : JSON.stringify(window.esgDraft, null, 2);
+                    btn.innerText = '🌐 한글 번역 보기';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

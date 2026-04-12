@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - esgai_net
+
+  engine:
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    container_name: engine
+    depends_on:
+      - redis
+    ports:
+      - "4610:4610"
+    networks:
+      - esgai_net
+    volumes:
+      - ./engine:/app
+      - /var/www/esgai/downloads:/app/downloads  # [Security Policy] 공유 배포 폴더
+      - /data/storage/reports:/data/storage/reports
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+
+  worker:
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    command: python worker.py
+    depends_on:
+      - redis
+    networks:
+      - esgai_net
+    volumes:
+      - ./engine:/app
+      - /var/www/esgai/downloads:/app/downloads  # [Security Policy] 공유 배포 폴더
+      - /data/storage/reports:/data/storage/reports
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+    deploy:
+      replicas: 3
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: web
+    depends_on:
+      - engine
+    ports:
+      - "4600:4600"  # [Caddy Sync] 호스트 Caddy가 바라보는 포트
+    networks:
+      - esgai_net
+    volumes:
+      - ./web:/app
+      - /var/www/esgai/downloads:/app/downloads  # [Security Policy] 공유 배포 폴더
+    env_file: .env
+    environment:
+      - ENGINE_URL=http://engine:4610
+
+networks:
+  esgai_net:
+    driver: bridge

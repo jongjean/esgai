@@ -1,0 +1,16 @@
+/home/ucon/esgai/web
+/home/ucon/esgai/web/footer_logo.jpg
+/home/ucon/esgai/web/I_AM_NOT_A_SCAMMER.txt
+/home/ucon/esgai/web/Dockerfile
+/home/ucon/esgai/web/1_ACTUAL_FILE_LIST_VERIFY_HERE.txt
+/home/ucon/esgai/web/requirements.txt
+/home/ucon/esgai/web/main.py
+/home/ucon/esgai/web/__pycache__
+/home/ucon/esgai/web/__pycache__/main.cpython-310.pyc
+/home/ucon/esgai/web/og_image.jpg
+/home/ucon/esgai/web/logo.png
+/home/ucon/esgai/web/downloads
+/home/ucon/esgai/web/footer_logo.png
+/home/ucon/esgai/web/og_image.png
+/home/ucon/esgai/web/admin.html
+/home/ucon/esgai/web/index.html

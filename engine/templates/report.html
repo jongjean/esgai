@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'NanumGothic', sans-serif; padding: 40px; color: #222; line-height: 1.8; }
+        .header { border-bottom: 3px solid #2ECC71; padding-bottom: 15px; margin-bottom: 30px; }
+        .title { font-size: 26px; font-weight: bold; color: #1a3a2a; }
+        .subtitle { font-size: 14px; color: #555; margin-top: 4px; }
+        .company-box { background: #F0FFF4; border: 1px solid #A3D9B1; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .company-box p { margin: 4px 0; font-size: 14px; }
+        .section { margin-bottom: 30px; }
+        .section-title { font-size: 17px; font-weight: bold; color: #166534; border-left: 5px solid #2ECC71; padding-left: 10px; margin-bottom: 12px; }
+        .content { font-size: 13px; text-align: justify; white-space: pre-wrap; background: #fafafa; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px; }
+        .footer { margin-top: 50px; border-top: 1px solid #EEE; padding-top: 12px; font-size: 11px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">AI-ESG 경영 진단 보고서</div>
+        <div class="subtitle">한국ESG학회 KESGAI엔진 생성</div>
+    </div>
+    
+    <div class="company-box">
+        <p><strong>발행 대상:</strong> {{ company_name }}</p>
+        <p><strong>산업 분야:</strong> {{ industry }}</p>
+        <p><strong>작성 일시:</strong> {{ generation_date }}</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">ESG 경영 전략 보고서 (KESGAI엔진 생성)</div>
+        <div class="content">{{ full_report }}</div>
+    </div>
+
+    <div class="footer">
+        본 보고서는 한국ESG학회 KESGAI 플랫폼을 통해 자동 생성된 ESG 경영 초안입니다.<br>
+        기업 상황에 맞게 수정하여 사용하시기 바랍니다.<br>
+        &copy; 2026 한국ESG학회 KESGAI Platform. All Rights Reserved.
+    </div>
+</body>
+</html>

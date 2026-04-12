@@ -1,0 +1,33 @@
+# [Security] Secrets
+.env
+*.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+.venv/
+venv/
+ENV/
+
+# Project Specific Trash
+db/
+engine/temp_gen/
+engine/downloads/
+web/downloads/
+downloads/
+dist/
+build/
+*.tmp
+curl_debug.json
+tables_out.txt
+*.log
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

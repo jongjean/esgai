@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>esgai 관리자 대시보드</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; }
+        .glass-panel { 
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 20px; 
+            padding: 40px; 
+            max-width: 1000px; 
+            margin: auto; 
+        }
+        h1 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        th { color: #3b82f6; }
+        .btn-confirm { 
+            background: #10b981; 
+            color: white; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: 0.3s;
+        }
+        .btn-confirm:hover { background: #059669; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="glass-panel">
+        <h1>ESG ai 실시간 운영 관제 (Admin)</h1>
+        <p>"나 너 회사 사회의 가치를 알면 이미 당신은 ESG실천가입니다."</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>결제 ID</th>
+                    <th>기업명</th>
+                    <th>상태</th>
+                    <th>액션</th>
+                </tr>
+            </thead>
+            <tbody id="payment-list">
+                <!-- 동적 데이터 삽입 영역 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function confirmPayment(paymentId) {
+            const res = await fetch(`/admin/confirm_payment?payment_id=${paymentId}`, { method: 'POST' });
+            if (res.ok) alert('결제가 승인되었습니다.');
+            loadPayments();
+        }
+
+        async function loadPayments() {
+            // MVP용 예시 데이터 및 실제 연동 로직
+            const list = document.getElementById('payment-list');
+            list.innerHTML = `
+                <tr>
+                    <td>PAY-2026-001</td>
+                    <td>(주)에스지미래</td>
+                    <td><span style="color:#fbbf24">보류(Pending)</span></td>
+                    <td><button class="btn-confirm" onclick="confirmPayment('PAY-2026-001')">입금확인</button></td>
+                </tr>
+            `;
+        }
+        
+        loadPayments();
+    </script>
+</body>
+</html>

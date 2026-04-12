@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+requests
+pydantic
+python-dotenv
+weasyprint
+jinja2
+httpx
+openai
+redis[hiredis]
+python-dotenv
+docxtpl
