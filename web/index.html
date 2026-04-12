@@ -87,7 +87,7 @@
         }
 
         .kesgai-info { 
-            color: #000000 !important; font-weight: bold; cursor: help; text-decoration: none;
+            color: var(--primary) !important; font-weight: bold; cursor: help; text-decoration: underline;
             position: relative; 
         }
         .kesgai-info:hover {
@@ -134,7 +134,7 @@
             <img src="./logo.png" alt="Logo" style="height: 40px;" onerror="this.style.display='none'">
             <div class="logo-text">ESG경영 AI가이드 Platform</div>
         </div>
-        <img src="./footer_logo.png" alt="Association Logo" style="height: 35px; opacity: 0.9;" onerror="this.style.display='none'">
+        <img src="./footer_logo.jpg" alt="Association Logo" style="height: 35px; opacity: 0.9;" onerror="this.style.display='none'">
     </header>
 
     <main class="hero">
@@ -190,7 +190,7 @@
                 <!-- 2단계 입력창 (동적 생성) -->
                 <div id="step2-input" style="display:none;">
                     <div style="font-size: 0.85rem; color: #E2E8F0; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.2); padding: 12px; border-radius: 8px;">
-                        기업의 실제 현황을 선택하시면<br><strong style="color:var(--secondary);">맞춤형 ESG 보고서 템플릿</strong>이 완성됩니다.
+                        기업(기관)의 실제 현황을 선택하시면<br><strong style="color:var(--secondary);">맞춤형 ESG 보고서 템플릿</strong>이 완성됩니다.
                     </div>
                     <div id="questions-container" style="padding-bottom: 20px;"></div>
                     <button onclick="submitStep2()" style="background: linear-gradient(135deg, #10B981, #059669); color: #fff;">✨ 맞춤형 보고서 생성하기</button>
@@ -320,17 +320,17 @@
             const kesgaiSpan = '<span class="kesgai-info">KESGAI</span>';
 
             if(stage === 1) {
-                if(titleEl) titleEl.innerHTML = `'<span style="color:var(--primary);">${companyGlobal}</span>' ` + M1[0].replace('KESGAI', kesgaiSpan);
+                if(titleEl) titleEl.innerHTML = `${kesgaiSpan}엔진이 '<span style="color:var(--primary); text-decoration: underline;">${companyGlobal}</span>'의 <br> 3단계 맞춤형 ESG 보고서 분석 생성 중....`;
                 if(descEl) descEl.innerText = "온라인 스크랩 정보를 기반으로 초도 작업을 진행합니다.";
             } else {
-                if(titleEl) titleEl.innerHTML = "맞춤형 보고서 분석 생성 중...";
-                if(descEl) descEl.innerText = "귀사가 입력한 상세 현황을 통합 매핑하고 있습니다.";
+                if(titleEl) titleEl.innerHTML = `${kesgaiSpan}엔진이 '<span style="color:var(--primary); text-decoration: underline;">${companyGlobal}</span>'의 <br> 3단계 맞춤형 ESG 보고서 분석 생성 중....`;
+                if(descEl) descEl.innerText = "귀사(기관)가(이) 입력한 상세 현황을 통합 매핑하고 있습니다.";
             }
             
             timerInterval = setInterval(() => {
                 timerSec++;
                 if(timerEl) timerEl.innerText = timerSec;
-                if(progEl) progEl.style.width = Math.min((timerSec/120)*100, 95) + '%';
+                if(progEl) progEl.style.width = Math.min((timerSec/180)*100, 95) + '%';
                 
                 if (stage === 1 && timerSec % 15 === 0) {
                     const msg = M1[Math.floor(timerSec / 15) % M1.length];
@@ -472,7 +472,8 @@
                 
                 let p = 0;
                 const pInterval = setInterval(() => {
-                    p = Math.min(p + 5, 95);
+                    // 180초(180,000ms) 기준 100% 도달 (500ms마다 약 0.27% 증가)
+                    p = Math.min(p + (100 / (180 * 2)), 98);
                     if(progBar) progBar.style.width = p + '%';
                 }, 500);
 
