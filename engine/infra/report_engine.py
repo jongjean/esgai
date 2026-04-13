@@ -78,17 +78,17 @@ class ESGReportEngine:
             
             # 치환 맵 구성
             size_label = data.get("size_label", "미지정")
-            full_mapping = {
-                "기업(기관)명:": f"기업(기관)명 : {company_name}",
-                "기업(기관)명 :": f"기업(기관)명 : {company_name}",
-                "회사(기관)명:": f"기업(기관)명 : {company_name}",
-                "기업(기관)형태 :": f"기업(기관)형태 : {size_label}",
-                "기업(기관)형태:": f"기업(기관)형태 : {size_label}",
-                "기업(기관)규모:": f"기업(기관)형태 : {size_label}",
-                "산업분류 :": f"산업분류 : {industry}",
-                "산업분류:": f"산업분류 : {industry}",
-                "보고기간:": f"보고기간: {datetime.now().year}년",
-                "작성일:": f"작성일: {date_str}",
+
+            # 치환 전략: 정규표현식을 사용한 정보 블록 치환 + 고정 플레이스홀더 치환
+            info_rules = [
+                (re.compile(r'(기업\(기관\)명|회사\(기관\)명)\s*:?'), f"기업(기관)명 : {company_name}"),
+                (re.compile(r'(기업\(기관\)형태|기업\(기관\)규모|회사\(기관\)분류)\s*:?'), f"기업(기관)형태 : {size_label}"),
+                (re.compile(r'(산업분류|산업분야)\s*:?'), f"산업분류 : {industry}"),
+                (re.compile(r'보고기간\s*:?'), f"보고기간: {datetime.now().year}년"),
+                (re.compile(r'작성일\s*:?'), f"작성일: {date_str}"),
+            ]
+            
+            anchor_mapping = {
                 "ESG 경영 보고서 초안 템플릿": f"{company_name} ESG 경영 보고서",
                 "[회사명]": company_name,
                 "[업종]": industry,
@@ -108,19 +108,29 @@ class ESGReportEngine:
                 "[governance.ethics]": str(gov.get("ethics", "윤리 규범 준수 및 투명한 기업 문화 확산")),
             }
 
-            # 1. Paragraph 순회 치환
-            for para in doc.paragraphs:
-                for search, replace in full_mapping.items():
-                    if search in para.text:
-                        self._replace_text(para, search, replace)
+            def process_text_container(container):
+                # 1. 정보 블록 (Regex 기반 - 각 규칙당 최대 1회 치환)
+                for pattern, replacement in info_rules:
+                    if pattern.search(container.text):
+                        # 런 서식 유지를 위해 _replace_text 호출 시 pattern의 search 결과 텍스트를 사용
+                        match = pattern.search(container.text)
+                        original_tag = match.group(0)
+                        self._replace_text(container, original_tag, replacement)
 
-            # 2. Table Cell 순회 치환
+                # 2. 일반 플레이스홀더 (고정 문자열 기반)
+                for search_str, replace_str in anchor_mapping.items():
+                    if search_str in container.text:
+                        self._replace_text(container, search_str, replace_str)
+
+            # 1. Paragraph 순회
+            for para in doc.paragraphs:
+                process_text_container(para)
+
+            # 2. Table Cell 순회
             for tbl in doc.tables:
                 for row in tbl.rows:
                     for cell in row.cells:
-                        for search, replace in full_mapping.items():
-                            if search in cell.text:
-                                self._replace_text(cell, search, replace)
+                        process_text_container(cell)
 
             doc.save(output_path)
             print(f"[ENGINE] DOCX Saved: {output_path}", flush=True)
