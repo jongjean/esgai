@@ -98,31 +98,21 @@
         }
         .kesgai-info:hover::after {
             content: "'KESGAI'는 'Korea ESG Association AI'이며\A한국ESG학회가 개발한 인공지능 ESG분석 엔진입니다.";
-            position: absolute;
-            bottom: 150%; left: 50%; transform: translateX(-50%);
-            background: #0F172A;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            border: 1px solid var(--primary);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            white-space: pre;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            background: #1E293B; color: #fff; padding: 12px 18px; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 500; line-height: 1.5; white-space: pre-wrap; width: 280px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--primary);
             z-index: 10000;
-            width: max-content;
-            pointer-events: none;
         }
-        /* 화살표 추가 */
-        .kesgai-info:hover::before {
-            content: '';
-            position: absolute;
-            bottom: 130%; left: 50%; transform: translateX(-50%);
-            border-width: 8px 8px 0 8px;
-            border-style: solid;
-            border-color: var(--primary) transparent transparent transparent;
-            z-index: 10000;
+
+        /* 로고 회전 애니메이션 */
+        @keyframes rotate-logo {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .loading {
+            animation: rotate-logo 2s linear infinite !important;
+            filter: drop-shadow(0 0 15px var(--primary)) !important;
         }
 
         @media (max-width: 768px) {
@@ -143,7 +133,7 @@
     <main class="hero">
         <!-- 메인 로고 영역 (재복구) -->
         <div style="margin-bottom: 30px; text-align: center; width: 100%; display: flex; justify-content: center;">
-            <img src="./logo.png" alt="Main ESG Logo" style="max-height: 240px; display: block;" onerror="this.style.display='none'">
+            <img src="./logo.png" id="main-logo" alt="Main ESG Logo" style="max-height: 240px; display: block; transition: all 0.5s ease;" onerror="this.style.display='none'">
         </div>
 
         <div class="catchphrase">
@@ -329,6 +319,10 @@
                 if(titleEl) titleEl.innerHTML = `${kesgaiSpan}엔진이 '<span style="color:var(--primary); text-decoration: underline;">${companyGlobal}</span>'의 <br> 3단계 맞춤형 ESG 보고서 분석 생성 중....`;
                 if(descEl) descEl.innerText = "귀사(기관)가(이) 입력한 상세 현황을 통합 매핑하고 있습니다.";
             }
+
+            // 로고 회전 시작
+            const mainLogo = document.getElementById('main-logo');
+            if(mainLogo) mainLogo.classList.add('loading');
             
             timerInterval = setInterval(() => {
                 timerSec++;
@@ -345,7 +339,13 @@
                 }
             }, 1000);
         }
-        function stopTimer() { if(timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+        function stopTimer() { 
+            if(timerInterval) { clearInterval(timerInterval); timerInterval = null; } 
+            
+            // 로고 회전 중지
+            const mainLogo = document.getElementById('main-logo');
+            if(mainLogo) mainLogo.classList.remove('loading');
+        }
 
         async function startAnalysis() {
             const name = document.getElementById('company_name').value;
