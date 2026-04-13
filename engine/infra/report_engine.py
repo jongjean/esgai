@@ -21,7 +21,8 @@ class ESGReportEngine:
 
     def _replace_text(self, container, search_str, replace_str):
         """
-        Paragraph나 Cell 내의 모든 Run을 순회하며 서식을 유지한 채 텍스트만 치환합니다.
+        문서 구조(w:sdt/컨텐츠 컨트롤)를 파괴하지 않기 위해 
+        최대한 Run(w:r) 단위로만 최소한의 치환을 수행합니다.
         """
         if not container or not search_str:
             return
@@ -30,23 +31,30 @@ class ESGReportEngine:
         paragraphs = container.paragraphs if hasattr(container, 'paragraphs') else [container]
         
         for p in paragraphs:
+            # 1. 단일 Run 내에 검색어가 완벽히 포함된 경우 (가장 안전)
+            for run in p.runs:
+                if search_str in run.text:
+                    run.text = run.text.replace(search_str, replace_str)
+                    # 이미 치환되었다면 다음 Run으로 넘어감 (중복 방지)
+            
+            # 2. 검색어가 여러 Run에 걸쳐 분할된 경우 (보통 보호 모드에서는 드물지만 대응)
             if search_str in p.text:
-                # 런(Run) 순회하며 치환
-                for run in p.runs:
-                    if search_str in run.text:
-                        run.text = run.text.replace(search_str, replace_str)
-                
-                # 검색어가 여러 런에 걸쳐 있는 경우 (최후의 수단: 서식이 깨질 수 있으나 치환은 완료)
+                full_text = p.text
+                new_text = full_text.replace(search_str, replace_str)
+                # python-docx의 p.text = ... 는 런 서식을 모두 초기화할 수 있으므로
+                # 최후의 수단으로만 사용하거나 루프 후에도 남아 있을 때만 제한적 적용
+                # 여기서는 템플릿의 서식을 최대한 보호하기 위해 위 루프에서 해결되지 않은 경우만 대응
                 if search_str in p.text:
-                    p.text = p.text.replace(search_str, replace_str)
+                    p.text = new_text
 
     def generate_docx(self, data: dict, output_path: str):
         try:
-            print(f"[ENGINE] Generating DOCX to {output_path}", flush=True)
+            print(f"[ENGINE] Generating DOCX (Template-Preservation Mode): {output_path}", flush=True)
             company_name = data.get("company_name", "미등록 기업")
             industry     = data.get("industry", "미분류")
             raw_report   = data.get("raw_report", "")
             date_str     = datetime.now().strftime("%Y-%m-%d")
+            size_label   = data.get("size_label", "미지정")
 
             # AI 생성 데이터 추출
             intro     = data.get("company_intro", "")
@@ -66,20 +74,18 @@ class ESGReportEngine:
             gov = payload.get("governance", {})
 
             # Fallback 데이터 구성
-            intro     = intro or payload.get("company_intro", f"{company_name}은 {industry} 분야의 선도 기업입니다.")
-            products  = products or payload.get("key_products", "핵심 제품 및 서비스")
-            locations = locations or payload.get("locations", "전국 주요 사업장 및 운영 사이트")
-            direction = direction or payload.get("esg_direction", "지속가능한 성장을 위한 가치 창출")
+            intro     = intro or f"{company_name}은 {industry} 분야의 선도 기업입니다."
+            products  = products or "핵심 제품 및 서비스"
+            locations = locations or "전국 주요 사업장 및 운영 사이트"
+            direction = direction or "지속가능한 성장을 위한 가치 창출"
 
             if not os.path.exists(self.docx_template_path):
                 raise FileNotFoundError(f"Template not found at {self.docx_template_path}")
 
+            # 템플릿 로드 (원본의 Protection 설정 유지)
             doc = Document(self.docx_template_path)
             
-            # 치환 맵 구성
-            size_label = data.get("size_label", "미지정")
-
-            # 치환 전략: 정규표현식을 사용한 정보 블록 치환 + 고정 플레이스홀더 치환
+            # 치환 전략: 정규표현식(정보 블록) + 고정 플레이스홀더
             info_rules = [
                 (re.compile(r'(기업\(기관\)명|회사\(기관\)명)\s*:?'), f"기업(기관)명 : {company_name}"),
                 (re.compile(r'(기업\(기관\)형태|기업\(기관\)규모|회사\(기관\)분류)\s*:?'), f"기업(기관)형태 : {size_label}"),
@@ -109,15 +115,14 @@ class ESGReportEngine:
             }
 
             def process_text_container(container):
-                # 1. 정보 블록 (Regex 기반 - 각 규칙당 최대 1회 치환)
+                # 1. 고정 정보 블록 (Regex 기반 - 각 항목당 1회)
                 for pattern, replacement in info_rules:
                     if pattern.search(container.text):
-                        # 런 서식 유지를 위해 _replace_text 호출 시 pattern의 search 결과 텍스트를 사용
                         match = pattern.search(container.text)
                         original_tag = match.group(0)
                         self._replace_text(container, original_tag, replacement)
 
-                # 2. 일반 플레이스홀더 (고정 문자열 기반)
+                # 2. 가변 플레이스홀더 (고정 문자열)
                 for search_str, replace_str in anchor_mapping.items():
                     if search_str in container.text:
                         self._replace_text(container, search_str, replace_str)
@@ -133,7 +138,7 @@ class ESGReportEngine:
                         process_text_container(cell)
 
             doc.save(output_path)
-            print(f"[ENGINE] DOCX Saved: {output_path}", flush=True)
+            print(f"[ENGINE] DOCX Saved Successfully (Preserved): {output_path}", flush=True)
 
         except Exception as e:
             print(f"❌ [ENGINE] DOCX ERROR: {e}", flush=True)
@@ -142,14 +147,14 @@ class ESGReportEngine:
 
     def generate_pdf(self, data: dict, output_path: str):
         try:
-            print(f"[ENGINE] Generating PDF to {output_path}", flush=True)
+            print(f"[ENGINE] Generating PDF with Notice Box: {output_path}", flush=True)
             company_name = data.get("company_name", "미등록 기업")
             industry     = data.get("industry", "미분류")
             raw_report   = data.get("raw_report", "")
             date_str     = datetime.now().strftime("%Y-%m-%d %H:%M")
+            size_label   = data.get("size_label", "미지정")
 
             try:
-                # 1. raw_report가 있으면 파싱 시도
                 payload = {}
                 if raw_report:
                     try:
@@ -158,38 +163,34 @@ class ESGReportEngine:
                     except:
                         payload = {}
 
-                # 2. 파싱 결과가 비어있으면 data 딕셔너리의 구조화된 데이터 직접 참조 (Fallback)
                 env = payload.get("environment") or data.get("environment", {})
                 soc = payload.get("social") or data.get("social", {})
                 gov = payload.get("governance") or data.get("governance", {})
 
-                size_label = data.get("size_label", "미지정")
                 sections = []
-                # 기관 정보 블록 추가
                 sections.append(f"<b>[기관 정보]</b><br>"
                                f"• 기업(기관)명 : {company_name}<br>"
                                f"• 기업(기관)형태 : {size_label}<br>"
                                f"• 산업분류 : {industry}")
 
                 sections.append(f"<b>[환경 (Environment)]</b><br>"
-                              f"• 실천 사항: {env.get('activity', '친환경 원자재 도입 및 에너지 효율화 실천')}<br>"
-                              f"• 추진 계획: {env.get('plan', '탄소 중립 달성을 위한 로드맵 수립 및 실행')}<br>"
-                              f"• 핵심 지표: {env.get('kpi', '온실가스 배출량 및 폐기물 재활용률 관리')}")
+                               f"• 실천 사항: {env.get('activity', '친환경 원자재 도입 및 에너지 효율화 실천')}<br>"
+                               f"• 추진 계획: {env.get('plan', '탄소 중립 달성을 위한 로드맵 수립 및 실행')}<br>"
+                               f"• 핵심 지표: {env.get('kpi', '온실가스 배출량 및 폐기물 재활용률 관리')}")
                 
                 sections.append(f"<b>[사회 (Social)]</b><br>"
-                              f"• 인사 정책: {soc.get('policy', '임직원 복리후생 및 인권 정책 강화')}<br>"
-                              f"• 안전 보건: {soc.get('safety', '사업장 안전 관리 시스템 구축 및 정기 점검')}<br>"
-                              f"• 기여: {soc.get('kpi', '지역 사회 공헌 지수 및 협력사 동반 성장')}")
+                               f"• 인사 정책: {soc.get('policy', '임직원 복리후생 및 인권 정책 강화')}<br>"
+                               f"• 안전 보건: {soc.get('safety', '사업장 안전 관리 시스템 구축 및 정기 점검')}<br>"
+                               f"• 기여 지표: {soc.get('kpi', '지역 사회 공헌 지수 및 협력사 동반 성장')}")
                 
                 sections.append(f"<b>[거버넌스 (Governance)]</b><br>"
-                              f"• 경영 체계: {gov.get('system', '이사회의 독립성 강화 및 책임 경영 체계 구축')}<br>"
-                              f"• 윤리 경영: {gov.get('ethics', '윤리 규정 준수 및 반부패 문화 확산')}")
+                               f"• 경영 체계: {gov.get('system', '이사회의 독립성 강화 및 책임 경영 체계 구축')}<br>"
+                               f"• 윤리 보강: {gov.get('ethics', '윤리 규정 준수 및 반부패 문화 확산')}")
                 
                 pretty_report = "<br><br>".join(sections)
-                pretty_report += "<br><br><small>※ 본 보고서는 자동 생성된 초안입니다. 세부 분석은 유료 서비스를 통해 제공됩니다.</small>"
+                pretty_report += "<br><br><small>※ 본 보고서는 KESGAI 엔진으로 자동 생성된 맞춤형 초안입니다.</small>"
             except Exception as e:
-                print(f"⚠️ [PDF ENGINE] Pretty report fail: {e}")
-                pretty_report = str(raw_report) + "<br><br>※ 데이터 처리 중 내부 오류가 발생했습니다."
+                pretty_report = str(raw_report) + f"<br><br>※ 데이터 처리 중 보고서 구조화 오류: {e}"
 
             context = {
                 "company_name":    company_name,
@@ -201,10 +202,11 @@ class ESGReportEngine:
             template = self.jinja_env.get_template(self.html_template_name)
             html_content = template.render(context)
             
+            # PDF 생성
             temp_path = output_path + ".tmp"
             HTML(string=html_content).write_pdf(temp_path)
             os.replace(temp_path, output_path)
-            print(f"[ENGINE] PDF Saved: {output_path}", flush=True)
+            print(f"[ENGINE] PDF Saved Successfully: {output_path}", flush=True)
 
         except Exception as e:
             print(f"❌ [ENGINE] PDF ERROR: {e}", flush=True)
