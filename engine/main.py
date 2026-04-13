@@ -48,6 +48,8 @@ class AnalyzeRequest(BaseModel):
 class TranslateRequest(BaseModel):
     text: str
     company_name: str = "기업"
+    industry: str = ""
+    size: str = ""
     job_id: Optional[str] = None
 
 @app.post("/analyze")
@@ -81,7 +83,12 @@ async def translate_text(req: TranslateRequest):
         if not req.text:
             raise HTTPException(status_code=400, detail="분석할 텍스트가 없습니다.")
 
-        result = await generator.translate_to_korean(req.text, req.company_name)
+        result = await generator.translate_to_korean(
+            req.text, 
+            req.company_name, 
+            industry=req.industry, 
+            size=req.size
+        )
         translated_text = result.get("translated_text", "")
         structured = result.get("structured", {})
 

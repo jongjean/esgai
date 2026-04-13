@@ -483,7 +483,12 @@
                 try {
                     const res = await fetch('./api/translate', { 
                         method:'POST', headers:{'Content-Type':'application/json'}, 
-                        body:JSON.stringify({text:window.esgDraft, company_name:companyGlobal}) 
+                        body:JSON.stringify({
+                            text:window.esgDraft, 
+                            company_name:companyGlobal,
+                            industry: document.getElementById('industry').value,
+                            size: document.getElementById('size').value
+                        }) 
                     });
                     const data = await res.json();
                     window.esgDraftKorean = data.translated_text;

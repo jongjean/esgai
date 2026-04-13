@@ -143,12 +143,22 @@ Industry: {industry}
                     raise Exception(f"AI 엔진 통합 추론 최종 실패: {str(e)}")
 
 
-    async def translate_to_korean(self, text: str, company_name: str) -> dict:
+    async def translate_to_korean(self, text: str, company_name: str, industry: str = "", size: str = "") -> dict:
         """
         [ESG 심층 강화 분석 엔진]
         1단계 영문 초안 기반으로 풍부한 한국어 ESG 심층 분석 보고서 생성.
         반환: { 'translated_text': 표시용 전체 텍스트, 'structured': {env, social, gov} }
         """
+        # 기관 정보 블록 생성
+        SIZE_MAP = {
+            "SME": "중소기업",
+            "Mid-Market": "중견기업",
+            "Enterprise": "대기업",
+            "NGO": "비영리기관",
+            "Other": "기타(그외)"
+        }
+        size_label = SIZE_MAP.get(size, size or "미지정")
+        header_block = f"기업(기관)명 : {company_name}\n기업(기관)형태 : {size_label}\n산업분류 : {industry or '산업'}\n\n"
         # [Shield 1] 심층 분석에 필요한 핵심 세션만 추출 (환경, 사회, 거버넌스, 공시)
         terms_guide = self._get_optimized_vocab(["env", "soc", "gov", "standards"])
 
@@ -217,7 +227,7 @@ Industry: {industry}
                 gov = structured.get("governance", {})
 
                 # Use triple quotes for display_text to avoid unterminated string literal
-                display_text = f"""[환경 (Environment)]
+                display_text = f"""{header_block}[환경 (Environment)]
 {env.get('summary', '')}
 
 {env.get('activity', '')}
