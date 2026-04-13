@@ -47,9 +47,9 @@ class ESGReportEngine:
             size_label = data.get("size_label", "미지정")
             for para in doc.paragraphs:
                 # 텍스트 치환 (유연한 검색)
-                if '회사(기관)명:' in para.text or '기업(기관)명 :' in para.text:
+                if '회사(기관)명:' in para.text or '기업(기관)명:' in para.text or '기업(기관)명 :' in para.text:
                     para.text = f"기업(기관)명 : {company_name}"
-                elif '기업(기관)형태 :' in para.text or '기업(기관)규모:' in para.text or '회사(기관)분류:' in para.text:
+                elif '기업(기관)형태 :' in para.text or '기업(기관)형태:' in para.text or '기업(기관)규모:' in para.text or '회사(기관)분류:' in para.text:
                     para.text = f"기업(기관)형태 : {size_label}"
                 elif '산업분류 :' in para.text or '산업분야:' in para.text:
                     para.text = f"산업분류 : {industry}"
