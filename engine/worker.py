@@ -47,6 +47,17 @@ async def worker_loop():
             stage = payload.get("stage", 1)
             company = payload.get("company_name", "기업")
             industry = payload.get("industry", "산업")
+            size = payload.get("size", "")
+
+            SIZE_MAP = {
+                "SME": "중소기업",
+                "Mid-Market": "중견기업",
+                "Enterprise": "대기업",
+                "NGO": "비영리기관",
+                "Other": "기타(그외)"
+            }
+            size_label = SIZE_MAP.get(size, size or "미지정")
+            header_block = f"기업(기관)명 : {company}\n기업(기관)형태 : {size_label}\n산업분류 : {industry}\n\n"
 
             print(f"📦 Processing Job [{job_id}] - Stage {stage} - Company: {company}", flush=True)
 
@@ -84,6 +95,7 @@ async def worker_loop():
 
 
                     formatted_text = (
+                        header_block +
                         "■ 환경 (Environment)\n\n"
                         f" [주요 환경 활동]\n{env_res.get('activity') or '해당 내용 없음'}\n\n"
                         f" [향후 환경 계획]\n{env_res.get('plan') or '해당 내용 없음'}\n\n"
@@ -106,6 +118,7 @@ async def worker_loop():
                     report_data = {
                         "company_name": company,
                         "industry": industry,
+                        "size_label": size_label,
                         "date": datetime.now().strftime("%Y-%m-%d"),
                         "raw_report": refined_report,
                         "environment": env_res,
@@ -160,10 +173,11 @@ async def worker_loop():
 
                     # [Single Source of Truth] 결과 저장 규격 단일화 (메인 API와 완벽 호환)
                     final_data = {
-                        "raw_report": korean_report,
+                        "raw_report": header_block + korean_report,
 
                         "company_name": company,
                         "industry": industry,
+                        "size": size,
                         "stage": 1
                     }
                     data_json = json.dumps(final_data, ensure_ascii=False)

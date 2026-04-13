@@ -44,10 +44,19 @@ class ESGReportEngine:
             doc = Document(self.docx_template_path)
             
             # 헤더 정보 채우기
+            size_label = data.get("size_label", "미지정")
             for para in doc.paragraphs:
-                if '회사(기관)명:' in para.text: para.text = f"회사(기관)명: {company_name}"
-                elif '보고기간:' in para.text: para.text = f"보고기간: {datetime.now().year}년"
-                elif '작성일:' in para.text: para.text = f"작성일: {date_str}"
+                # 텍스트 치환 (유연한 검색)
+                if '회사(기관)명:' in para.text or '기업(기관)명 :' in para.text:
+                    para.text = f"기업(기관)명 : {company_name}"
+                elif '기업(기관)형태 :' in para.text or '기업(기관)규모:' in para.text or '회사(기관)분류:' in para.text:
+                    para.text = f"기업(기관)형태 : {size_label}"
+                elif '산업분류 :' in para.text or '산업분야:' in para.text:
+                    para.text = f"산업분류 : {industry}"
+                elif '보고기간:' in para.text: 
+                    para.text = f"보고기간: {datetime.now().year}년"
+                elif '작성일:' in para.text: 
+                    para.text = f"작성일: {date_str}"
 
             # 앵커 맵핑 (기존 템플릿 호환)
             anchor_map = {
@@ -128,7 +137,14 @@ class ESGReportEngine:
                 soc = payload.get("social") or data.get("social", {})
                 gov = payload.get("governance") or data.get("governance", {})
 
+                size_label = data.get("size_label", "미지정")
                 sections = []
+                # 기관 정보 블록 추가
+                sections.append(f"<b>[기관 정보]</b><br>"
+                               f"• 기업(기관)명 : {company_name}<br>"
+                               f"• 기업(기관)형태 : {size_label}<br>"
+                               f"• 산업분류 : {industry}")
+
                 sections.append(f"<b>[환경 (Environment)]</b><br>"
                               f"• 실천 사항: {env.get('activity', '친환경 원자재 도입 및 에너지 효율화 실천')}<br>"
                               f"• 추진 계획: {env.get('plan', '탄소 중립 달성을 위한 로드맵 수립 및 실행')}<br>"

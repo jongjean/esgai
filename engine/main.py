@@ -128,6 +128,7 @@ async def analyze_deep(req: Request):
         base_data = json.loads(base_result_str)
         company = base_data.get("company_name", "기업")
         industry = base_data.get("industry", "산업")
+        size = base_data.get("size", "")
 
         # [Unified ID] 1단계와 동일한 ID 사용 (경계 정규화)
         # 2단계 요청 데이터 저장 (메타데이터 보관)
@@ -141,6 +142,7 @@ async def analyze_deep(req: Request):
             "stage": 2,
             "company_name": company,
             "industry": industry,
+            "size": size,
             "step2_data": req_data,
             "raw_report": base_data.get("raw_report", "")
         }
