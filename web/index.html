@@ -469,6 +469,11 @@
             if(!window.esgDraftKorean) {
                 // 한글판이 아직 없으면 AI 생성 (최초 1회)
                 btn.innerText = `⌛ '${companyGlobal}'의 ESG보고서 생성 중...`;
+                
+                // 로고 회전 시작
+                const mainLogo = document.getElementById('main-logo');
+                if(mainLogo) mainLogo.classList.add('loading');
+
                 const progBox = document.getElementById('translate-progress-container');
                 const progBar = document.getElementById('translate-progress');
                 if(progBox) progBox.style.display = 'block';
@@ -500,10 +505,18 @@
                     content.innerText = window.esgDraftKorean;
                     btn.innerText = '🌐 원문 보기(English)';
                     if(nextBtn) nextBtn.style.display = 'block'; // 한글 생성 후 다음 단계 버튼 노출
+
+                    // 로고 회전 중지
+                    if(mainLogo) mainLogo.classList.remove('loading');
                 } catch(e) { 
                     clearInterval(pInterval);
                     if(progBox) progBox.style.display = 'none';
                     btn.innerText = '🌐 한글 번역 보기'; 
+                    
+                    // 로고 회전 중지
+                    const mainLogo = document.getElementById('main-logo');
+                    if(mainLogo) mainLogo.classList.remove('loading');
+                    
                     alert('번역 중 오류가 발생했습니다.');
                 }
             } else {
