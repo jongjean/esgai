@@ -123,7 +123,11 @@ async def worker_loop():
                         "raw_report": refined_report,
                         "environment": env_res,
                         "social": soc_res,
-                        "governance": gov_res
+                        "governance": gov_res,
+                        "company_intro": data_obj.get("company_intro", ""),
+                        "key_products": data_obj.get("key_products", ""),
+                        "locations": data_obj.get("locations", ""),
+                        "esg_direction": data_obj.get("esg_direction", "")
                     }
 
                     # [Atomic Distribution Logic]

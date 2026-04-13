@@ -19,6 +19,27 @@ class ESGReportEngine:
         self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
         print(f"[ENGINE] Initialized. Template Path: {self.docx_template_path}", flush=True)
 
+    def _replace_text(self, container, search_str, replace_str):
+        """
+        Paragraph나 Cell 내의 모든 Run을 순회하며 서식을 유지한 채 텍스트만 치환합니다.
+        """
+        if not container or not search_str:
+            return
+
+        # Paragraph 단위 처리
+        paragraphs = container.paragraphs if hasattr(container, 'paragraphs') else [container]
+        
+        for p in paragraphs:
+            if search_str in p.text:
+                # 런(Run) 순회하며 치환
+                for run in p.runs:
+                    if search_str in run.text:
+                        run.text = run.text.replace(search_str, replace_str)
+                
+                # 검색어가 여러 런에 걸쳐 있는 경우 (최후의 수단: 서식이 깨질 수 있으나 치환은 완료)
+                if search_str in p.text:
+                    p.text = p.text.replace(search_str, replace_str)
+
     def generate_docx(self, data: dict, output_path: str):
         try:
             print(f"[ENGINE] Generating DOCX to {output_path}", flush=True)
@@ -26,6 +47,12 @@ class ESGReportEngine:
             industry     = data.get("industry", "미분류")
             raw_report   = data.get("raw_report", "")
             date_str     = datetime.now().strftime("%Y-%m-%d")
+
+            # AI 생성 데이터 추출
+            intro     = data.get("company_intro", "")
+            products  = data.get("key_products", "")
+            locations = data.get("locations", "")
+            direction = data.get("esg_direction", "")
 
             # JSON 파싱
             try:
@@ -38,28 +65,39 @@ class ESGReportEngine:
             soc = payload.get("social", {})
             gov = payload.get("governance", {})
 
+            # Fallback 데이터 구성
+            intro     = intro or payload.get("company_intro", f"{company_name}은 {industry} 분야의 선도 기업입니다.")
+            products  = products or payload.get("key_products", "핵심 제품 및 서비스")
+            locations = locations or payload.get("locations", "전국 주요 사업장 및 운영 사이트")
+            direction = direction or payload.get("esg_direction", "지속가능한 성장을 위한 가치 창출")
+
             if not os.path.exists(self.docx_template_path):
                 raise FileNotFoundError(f"Template not found at {self.docx_template_path}")
 
             doc = Document(self.docx_template_path)
             
-            # 헤더 정보 채우기
+            # 치환 맵 구성
             size_label = data.get("size_label", "미지정")
-            for para in doc.paragraphs:
-                # 텍스트 치환 (유연한 검색)
-                if '회사(기관)명:' in para.text or '기업(기관)명:' in para.text or '기업(기관)명 :' in para.text:
-                    para.text = f"기업(기관)명 : {company_name}"
-                elif '기업(기관)형태 :' in para.text or '기업(기관)형태:' in para.text or '기업(기관)규모:' in para.text or '회사(기관)분류:' in para.text:
-                    para.text = f"기업(기관)형태 : {size_label}"
-                elif '산업분류 :' in para.text or '산업분야:' in para.text:
-                    para.text = f"산업분류 : {industry}"
-                elif '보고기간:' in para.text: 
-                    para.text = f"보고기간: {datetime.now().year}년"
-                elif '작성일:' in para.text: 
-                    para.text = f"작성일: {date_str}"
-
-            # 앵커 맵핑 (기존 템플릿 호환)
-            anchor_map = {
+            full_mapping = {
+                "기업(기관)명:": f"기업(기관)명 : {company_name}",
+                "기업(기관)명 :": f"기업(기관)명 : {company_name}",
+                "회사(기관)명:": f"기업(기관)명 : {company_name}",
+                "기업(기관)형태 :": f"기업(기관)형태 : {size_label}",
+                "기업(기관)형태:": f"기업(기관)형태 : {size_label}",
+                "기업(기관)규모:": f"기업(기관)형태 : {size_label}",
+                "산업분류 :": f"산업분류 : {industry}",
+                "산업분류:": f"산업분류 : {industry}",
+                "보고기간:": f"보고기간: {datetime.now().year}년",
+                "작성일:": f"작성일: {date_str}",
+                "ESG 경영 보고서 초안 템플릿": f"{company_name} ESG 경영 보고서",
+                "[회사명]": company_name,
+                "[업종]": industry,
+                "[주요 제품/서비스]": products,
+                "[주요 제품 또는 서비스]": products,
+                "[사업장 또는 운영 현황]": locations,
+                "[주요 지역]": locations,
+                "[ESG 경영 방향]": direction,
+                "[회사 소개]": intro,
                 "[environment.activity]": str(env.get("activity", "친환경 공정 도입 및 에너지 효율화 추진")),
                 "[environment.plan]": str(env.get("plan", "탄소 중립 달성을 위한 중장기 로드맵 이행")),
                 "[environment.kpi]": str(env.get("kpi", "에너지 사용량 및 재생에너지 비중 관리")),
@@ -70,43 +108,21 @@ class ESGReportEngine:
                 "[governance.ethics]": str(gov.get("ethics", "윤리 규범 준수 및 투명한 기업 문화 확산")),
             }
 
-            # 텍스트 치환 루프 (기업명 1회 노출 및 조사 처리)
-            company_replaced = False
-            company_pattern = re.compile(r'\[회사명\](은|는|이|가|의)?')
+            # 1. Paragraph 순회 치환
+            for para in doc.paragraphs:
+                for search, replace in full_mapping.items():
+                    if search in para.text:
+                        self._replace_text(para, search, replace)
 
-            def replace_company(match):
-                nonlocal company_replaced
-                particle = match.group(1) or ""
-                if not company_replaced:
-                    company_replaced = True
-                    return company_name + particle
-                else:
-                    return ""
-
-            for paragraph in doc.paragraphs:
-                for anchor, text_val in anchor_map.items():
-                    if anchor in paragraph.text:
-                        paragraph.text = paragraph.text.replace(anchor, str(text_val))
-                
-                paragraph.text = company_pattern.sub(replace_company, paragraph.text)
-                if '[업종]' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('[업종]', industry)
-
+            # 2. Table Cell 순회 치환
             for tbl in doc.tables:
                 for row in tbl.rows:
                     for cell in row.cells:
-                        for anchor, text_val in anchor_map.items():
-                            if anchor in cell.text:
-                                cell.text = cell.text.replace(anchor, str(text_val))
-                        
-                        cell.text = company_pattern.sub(replace_company, cell.text)
-                        if '[업종]' in cell.text:
-                            cell.text = cell.text.replace('[업종]', industry)
+                        for search, replace in full_mapping.items():
+                            if search in cell.text:
+                                self._replace_text(cell, search, replace)
 
-            # 원자적 저장
-            temp_path = output_path + ".tmp"
-            doc.save(temp_path)
-            os.replace(temp_path, output_path)
+            doc.save(output_path)
             print(f"[ENGINE] DOCX Saved: {output_path}", flush=True)
 
         except Exception as e:

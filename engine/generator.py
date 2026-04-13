@@ -300,6 +300,10 @@ Industry: {industry}
 
 [응답 JSON 스키마]
 {
+  "company_intro": "기업(기관)의 개요, 설립 목적 및 미션 (3문장 내외)",
+  "key_products": "기업(기관)의 주요 제품, 서비스 또는 핵심 사업 부문 (요약)",
+  "locations": "국내외 주요 사업장 위치 또는 운영 현황 (요약)",
+  "esg_direction": "핵심 ESG 경영 철학 및 추진 방향 (1문장)",
   "environment": {
     "activity": "주요 환경 활동 및 실천 체계 (상세, 10문장 이상)",
     "plan": "향후 환경 계획 및 로드맵 (상세, 10문장 이상)",
