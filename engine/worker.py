@@ -96,6 +96,13 @@ async def worker_loop():
 
                     formatted_text = (
                         header_block +
+                        "■ 기업 개요 및 미션\n"
+                        f"{data_obj.get('company_intro') or '분석 중...'}\n\n"
+                        "■ 주요 비즈니스 요약\n"
+                        f"{data_obj.get('key_products') or '분석 중...'}\n\n"
+                        "■ ESG 경영 핵심 방향\n"
+                        f"👉 {data_obj.get('esg_direction') or '분석 중...'}\n\n"
+                        "--------------------------------------------------\n\n"
                         "■ 환경 (Environment)\n\n"
                         f" [주요 환경 활동]\n{env_res.get('activity') or '해당 내용 없음'}\n\n"
                         f" [향후 환경 계획]\n{env_res.get('plan') or '해당 내용 없음'}\n\n"
@@ -106,7 +113,10 @@ async def worker_loop():
                         f" [사회 공헌 지표]\n{soc_res.get('kpi') or '해당 내용 없음'}\n\n"
                         "■ 거버넌스 (Governance)\n\n"
                         f" [투명 경영 및 운영 체계]\n{gov_res.get('system') or '해당 내용 없음'}\n\n"
-                        f" [윤리 경영 및 준법 기준]\n{gov_res.get('ethics') or '해당 내용 없음'}"
+                        f" [윤리 경영 및 준법 기준]\n{gov_res.get('ethics') or '해당 내용 없음'}\n\n"
+                        "--------------------------------------------------\n\n"
+                        "■ 핵심 성과 지표 (Core KPIs)\n"
+                        f"{data_obj.get('core_kpi') or '분석 중...'}"
                     )
 
                     final_payload = {
@@ -144,8 +154,8 @@ async def worker_loop():
                     # 2. 공배포 폴더명 결정 (기업별 일련번호 적용, 날짜 제거)
                     current_count = await redis_mgr.get_company_gen_count(company)
                     suffix = f"{current_count:03d}"
-                    dist_docx_name = f"ESG_Templet_{company}+{suffix}.docx"
-                    dist_pdf_name = f"ESG_report_{company}+{suffix}.pdf"
+                    dist_docx_name = f"ESG_Templet_{company}_{suffix}.docx"
+                    dist_pdf_name = f"ESG_Templet_{company}_{suffix}.pdf"
 
                     # 3. 원자적 복제 및 이름 변경 (tmp -> replace)
                     for src, dist_name in [(internal_docx, dist_docx_name), (internal_pdf, dist_pdf_name)]:

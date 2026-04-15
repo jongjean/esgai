@@ -83,7 +83,7 @@ async def request_analyze_deep(data: dict):
 
 @app.post("/translate")
 async def request_translate(data: dict):
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=180.0) as client:
         try:
             response = await client.post(f"{ENGINE_URL}/translate", json=data)
             response.raise_for_status()
@@ -91,17 +91,15 @@ async def request_translate(data: dict):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/leads")
+@app.post("/api/leads")
 async def save_lead(data: dict):
-    logger.info(f"Relaying lead saving request to engine: {data.get('email')}")
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             response = await client.post(f"{ENGINE_URL}/api/leads", json=data)
             response.raise_for_status()
-            logger.info(f"Lead saved successfully for {data.get('email')}")
             return response.json()
         except Exception as e:
-            logger.error(f"Error in /leads relay: {str(e)}")
+            logger.error(f"Error in /api/leads relay: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/download/{job_id}/{file_type}")

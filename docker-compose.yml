@@ -22,7 +22,7 @@ services:
       - esgai_net
     volumes:
       - ./engine:/app
-      - ./downloads:/app/downloads  # [Portability] 상대 경로 사용
+      - /var/www/esgai/downloads:/app/downloads  # [Portability] 상대 경로 사용
       - ./storage/reports:/data/storage/reports
     env_file: .env
     environment:
@@ -40,7 +40,7 @@ services:
       - esgai_net
     volumes:
       - ./engine:/app
-      - ./downloads:/app/downloads  # [Portability] 상대 경로 사용
+      - /var/www/esgai/downloads:/app/downloads  # [Portability] 상대 경로 사용
       - ./storage/reports:/data/storage/reports
     env_file: .env
     environment:
@@ -62,7 +62,7 @@ services:
       - esgai_net
     volumes:
       - ./web:/app
-      - ./downloads:/app/downloads  # [Portability] 상대 경로 사용
+      - /var/www/esgai/downloads:/app/downloads  # [Portability] 상대 경로 사용
     env_file: .env
     environment:
       - ENGINE_URL=http://engine:4610

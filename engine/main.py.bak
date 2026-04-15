@@ -13,7 +13,6 @@ import shutil
 from urllib.parse import quote
 from dotenv import load_dotenv
 import asyncio
-import hashlib
 
 from generator import ESGGenerator
 from rules import ESGRuleEngine
@@ -109,27 +108,7 @@ class LeadRequest(BaseModel):
 
 @app.post("/analyze")
 async def analyze_esg(req: AnalyzeRequest):
-    # [Milestone 4] Redis Caching (Stage 1)
-    is_premium = getattr(req, 'is_premium', False)
-    if not is_premium:
-        raw_key = f"{req.company_name}_{req.industry}_{req.size}_stage1"
-        cache_hash = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
-        cached_job_id = await redis_mgr.client.get(f"cache:stage1:{cache_hash}")
-        if cached_job_id:
-            # 상태가 done인지 확인
-            st = await redis_mgr.get_job_status(cached_job_id)
-            if st == "done":
-                print(f"[CACHE HIT] Stage 1 reused job: {cached_job_id}")
-                return {"job_id": cached_job_id, "status": "queued"}
-
     job_id = str(uuid.uuid4())
-    
-    if not is_premium:
-        raw_key = f"{req.company_name}_{req.industry}_{req.size}_stage1"
-        cache_hash = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
-        # 24시간 TTL
-        await redis_mgr.client.set(f"cache:stage1:{cache_hash}", job_id, ex=86400)
-
     payload = {
         "company_name": req.company_name,
         "industry": req.industry,
@@ -150,28 +129,33 @@ async def get_status(job_id: str):
     return {"status": status}
 
 @app.post("/translate")
-async def extract_translation(req: Request):
+async def translate_text(req: TranslateRequest):
     try:
-        data = await req.json()
-        target_text = data.get("text", "")
-        
-        # [Milestone 4] Redis Caching (Stage 2 - Translation)
-        cache_hash = hashlib.sha256(target_text.encode('utf-8')).hexdigest()
-        cached_trans = await redis_mgr.client.get(f"cache:trans:{cache_hash}")
-        if cached_trans:
-            print("[CACHE HIT] Translation reused")
-            return {"translated_text": cached_trans}
+        print(f"[API] Deep ESG Analysis Request for: {req.company_name}", flush=True)
+        if not req.text:
+            raise HTTPException(status_code=400, detail="분석할 텍스트가 없습니다.")
 
-        # Stage 2: Translate the draft strictly (No Markdown)
-        translated = await generator.translate_to_korean(target_text)
-        
-        # Cache the translation for 1 hour
-        await redis_mgr.client.set(f"cache:trans:{cache_hash}", translated, ex=3600)
-        
-        return {"translated_text": translated}
+        result = await generator.translate_to_korean(
+            req.text, 
+            req.company_name, 
+            industry=req.industry, 
+            size=req.size
+        )
+        translated_text = result.get("translated_text", "")
+        structured = result.get("structured", {})
+
+        print(f"[API] Deep Analysis Success. Length: {len(translated_text)}", flush=True)
+
+        if req.job_id and structured:
+            ext_data = json.dumps({"structured": structured, "company_name": req.company_name}, ensure_ascii=False)
+            await redis_mgr.client.set(f"extended_report:{req.job_id}", ext_data, ex=86400)
+            print(f"[API] Extended report stored for job: {req.job_id}", flush=True)
+
+        return {"translated_text": translated_text}
     except Exception as e:
-        print(f"❌ Translation API Error: {str(e)}", flush=True)
-        return {"translated_text": "현장에서 한국어 렌더링에 실패했습니다. 다음 단계로 넘어가 조회를 계속해 주세요."}
+        print(f"[API] Deep Analysis Error: {e}", flush=True)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze/deep")
 async def analyze_deep(req: Request):
@@ -205,38 +189,6 @@ async def analyze_deep(req: Request):
         await redis_mgr.client.set(f"{redis_mgr.NS_REQ_DATA}{job_id}", json.dumps(req_data), ex=86400)
         await redis_mgr.set_job_status(job_id, "queued", force=True)
         
-        # [Milestone 4] Redis Caching (Stage 2)
-        is_premium = data.get("is_premium", False)
-        if not is_premium:
-            answers_str = json.dumps(req_data, sort_keys=True)
-            raw_key = f"{company}_{industry}_{size}_stage2_{answers_str}"
-            cache_hash = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
-            cached_job_id = await redis_mgr.client.get(f"cache:stage2:{cache_hash}")
-            
-            if cached_job_id:
-                st = await redis_mgr.get_job_status(cached_job_id)
-                if st == "done":
-                    res = await redis_mgr.client.get(f"{redis_mgr.NS_RESULT}{cached_job_id}")
-                    if res:
-                        try:
-                            # 기존 결과 파일과 데이터를 현재 job_id로 복제 (무료 이용자 중복 방어)
-                            shutil.copy(os.path.join(DOWNLOAD_DIR, f"{cached_job_id}.docx"), os.path.join(DOWNLOAD_DIR, f"{job_id}.docx"))
-                            shutil.copy(os.path.join(DOWNLOAD_DIR, f"{cached_job_id}.pdf"), os.path.join(DOWNLOAD_DIR, f"{job_id}.pdf"))
-                            
-                            await redis_mgr.client.set(f"{redis_mgr.NS_RESULT}{job_id}", res)
-                            await redis_mgr.client.set(f"file_ready:{job_id}", "true")
-                            await redis_mgr.client.set(f"dist_file:{job_id}:docx", await redis_mgr.client.get(f"dist_file:{cached_job_id}:docx") or "")
-                            await redis_mgr.client.set(f"dist_file:{job_id}:pdf", await redis_mgr.client.get(f"dist_file:{cached_job_id}:pdf") or "")
-                            await redis_mgr.set_job_status(job_id, "done")
-                            print(f"[CACHE HIT] Stage 2 reused job: {cached_job_id} for {job_id}")
-                            return {"status": "queued", "job_id": job_id}
-                        except Exception as ce:
-                            print(f"[CACHE ERROR] Restore failed: {ce}")
-                            # fallback to queue
-            
-            # 캐시가 없으면 현재 job_id 등록해두고 생성
-            await redis_mgr.client.set(f"cache:stage2:{cache_hash}", job_id, ex=86400)
-
         payload = {
             "stage": 2,
             "company_name": company,

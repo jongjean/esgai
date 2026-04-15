@@ -298,8 +298,8 @@
                     </div>
 
                     <div style="display: flex; gap: 12px; margin-top: 20px;">
-                        <a id="download-docx" href="#" class="disabled" style="flex:1; background: #2B579A; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center; line-height: 1.4;">MS워드 템플릿<br>DOCX 다운로드</a>
-                        <a id="download-pdf" href="#" class="disabled" style="flex:1; background: #C4302B; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center; line-height: 1.4;">맞춤형 보고서<br>PDF 다운로드</a>
+                        <a id="download-docx" href="#" class="disabled" style="flex:1; background: #2B579A; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center;">DOCX 다운로드</a>
+                        <a id="download-pdf" href="#" class="disabled" style="flex:1; background: #C4302B; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center;">PDF 다운로드</a>
                     </div>
                     <button onclick="restartAnalysis()" style="background: #334155; color: #fff; margin-top: 15px;">처음으로 돌아가기</button>
                 </div>
@@ -360,15 +360,6 @@
                 if (isValid) { docxBtn.classList.remove('disabled'); pdfBtn.classList.remove('disabled'); }
                 else { docxBtn.classList.add('disabled'); pdfBtn.classList.add('disabled'); }
             }
-        }
-
-        // --- Path Resolution Helper ---
-        function getApiUrl(path) {
-            const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-            const base = window.location.pathname.endsWith('/') 
-                ? window.location.pathname 
-                : window.location.pathname + '/';
-            return base + cleanPath;
         }
 
         function setState(nextState, errorMsg = "") {
@@ -473,7 +464,7 @@
             startTimer(1);
 
             try {
-                const res = await fetch(getApiUrl('api/analyze'), { 
+                const res = await fetch('./api/analyze', { 
                     method:'POST', headers:{'Content-Type':'application/json'}, 
                     body:JSON.stringify(data), signal:abortController.signal 
                 });
@@ -487,7 +478,7 @@
             const poll = async () => {
                 if(isCompleted) return;
                 try {
-                    const res = await fetch(getApiUrl(stage === 1 ? `api/status/${jobId}` : `api/status/deep/${jobId}`));
+                    const res = await fetch(stage === 1 ? `./api/status/${jobId}` : `./api/status/deep/${jobId}`);
                     const data = await res.json();
                     if(data.status === 'done') {
                         stage === 1 ? handleSuccess1(data.report) : handleSuccess2(data);
@@ -564,7 +555,7 @@
 
             isCompleted = false; setState(UI_STATE.LOADING_STEP2); startTimer(2);
             try {
-                await fetch(getApiUrl('api/analyze/deep'), { 
+                await fetch('./api/analyze/deep', { 
                     method:'POST', headers:{'Content-Type':'application/json'}, 
                     body:JSON.stringify(data) 
                 });
@@ -599,7 +590,7 @@
                 }, 500);
 
                 try {
-                    const res = await fetch(getApiUrl('api/translate'), { 
+                    const res = await fetch('./api/translate', { 
                         method:'POST', headers:{'Content-Type':'application/json'}, 
                         body:JSON.stringify({
                             text:window.esgDraft, 
@@ -675,13 +666,13 @@
                         source: 'download'
                     };
                     try {
-                        const res = await fetch(getApiUrl('api/leads'), {
+                        const res = await fetch('/api/leads', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(leadData)
                         });
                         if (res.ok) {
                             const fname = el.getAttribute('data-filename');
-                            window.location.href = fname ? getApiUrl(`downloads/${fname}`) : getApiUrl(`download/${globalJobId}/${fmt}`);
+                            window.location.href = fname ? `/downloads/${fname}` : `/download/${globalJobId}/${fmt}`;
                         } else {
                             const err = await res.json();
                             alert("정보 저장 오류: " + (err.detail || "서버 응답 오류"));

@@ -1,0 +1,424 @@
+import os
+import json
+import time
+import asyncio
+import httpx
+import re
+from openai import AsyncOpenAI
+from typing import Dict, Any
+
+class ESGGenerator:
+    def __init__(self):
+        # 환경 변수에서 API 키 로드 (보안 정책 준수)
+        self.api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        
+        if not self.api_key:
+            raise ValueError("DEEPSEEK_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
+
+        # 비동기 OpenAI 클라이언트 초기화 (타임아웃 60초 강제 설정)
+        self.client = AsyncOpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=120.0
+        )
+        self.model = "deepseek-chat" # DeepSeek-V3 상용 모델
+        self.vocab_map = self._load_vocabulary()
+        print(f"🏛️ ESGGenerator Initialized with model: {self.model} and structured vocab (Shield 1).")
+
+    def _load_vocabulary(self) -> Dict[str, str]:
+        """
+        [Shield 1] 용어 사전을 카테고리별로 분할 로드하여 선택적 주입 준비.
+        """
+        vocab_path = "/app/esg_vocabulary.txt"
+        if not os.path.exists(vocab_path):
+            # 로컬 개발 환경 호환성
+            vocab_path = "/home/ucon/esgai/engine/esg_vocabulary.txt"
+            
+        try:
+            with open(vocab_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # 카테고리별 분할 (🌱, 👥, 🏛️, 📊, ⚙️ 키워드 중심)
+            vmap = {
+                "rules": "", "env": "", "soc": "", "gov": "", "standards": "", "ops": ""
+            }
+            
+            sections = re.split(r'### ', content)
+            vmap["rules"] = sections[0] if len(sections) > 0 else ""
+            
+            for section in sections[1:]:
+                if "환경" in section or "🌱" in section: vmap["env"] = "### " + section
+                elif "사회" in section or "👥" in section: vmap["soc"] = "### " + section
+                elif "거버넌스" in section or "🏛️" in section: vmap["gov"] = "### " + section
+                elif "공시" in section or "📊" in section: vmap["standards"] = "### " + section
+                elif "실행" in section or "⚙️" in section: vmap["ops"] = "### " + section
+            
+            return vmap
+        except Exception as e:
+            print(f"⚠️ [Shield 1] Vocabulary load failed: {e}")
+            return {}
+
+    def _get_optimized_vocab(self, categories: list = None) -> str:
+        """
+        필요한 카테고리만 조합하여 압축된 가이드 생성.
+        """
+        if not categories: return self.vocab_map.get("rules", "")
+        
+        selected = [self.vocab_map.get("rules", "")]
+        for cat in categories:
+            if cat in self.vocab_map:
+                selected.append(self.vocab_map[cat])
+        return "\n".join(selected)
+
+    async def generate_policies(self, company_name: str, industry: str) -> str:
+        """
+        [Shield 2] Stage 1 - Ultra-Light 모드. 용어 사전 없이 핵심 ESG 뼈대만 영어로 생성하여 비용과 속도 극대화.
+        """
+        print(f"🚀 [Shield 2] 초경량 분석 시작: {company_name}")
+        start_time = time.time()
+        
+        # [Shield 4] 정적 시스템 프롬프트 (가변 데이터 제거로 캐싱 히트율 극대화)
+        system_prompt = """You are a senior ESG context extractor at a top-tier global ESG agency.
+Produce a professional business-level ESG management guideline in English based on the user's input.
+[Absolute Rules]
+- Be action-oriented and professional.
+- Omit the subject (the company name) in every sentence.
+- Use precise formal business English.
+- Return ONLY a JSON object."""
+        
+        # [Shield 4] 가변 데이터는 User Prompt로 배치
+        user_prompt = f"""Generate a high-level ESG policy draft for:
+Company: {company_name}
+Industry: {industry}
+
+[Format]
+{{
+  "esg_policy": {{
+    "environment": "3-5 sentences of specific guidelines",
+    "social": "3-5 sentences of specific guidelines",
+    "governance": "3-5 sentences of specific guidelines"
+  }}
+}}"""
+
+
+        max_retries = 1
+        for attempt in range(max_retries + 1):
+            try:
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.7
+                    ),
+                    timeout=30.0
+                )
+
+                content = response.choices[0].message.content
+                result = json.loads(content)
+                policy = result.get("esg_policy", {})
+
+                # [One-Pass] Return English report for Stage 1 display
+                formatted_english = f"""[Environment]
+{policy.get('environment', 'Analysis failed')}
+
+[Social]
+{policy.get('social', 'Analysis failed')}
+
+[Governance]
+{policy.get('governance', 'Analysis failed')}"""
+
+                print(f"✅ 초고속 분석 완료: {int((time.time()-start_time)*1000)}ms", flush=True)
+                return formatted_english
+
+            except Exception as e:
+                if attempt < max_retries:
+                    print(f"⚠️ Retrying AI Analysis (Attempt {attempt+1}): {e}", flush=True)
+                    await asyncio.sleep((attempt + 1) * 2)
+                else:
+                    print(f"🚨 API 잔액 부족 등 치명적 오류. Mock 데이터로 Fallback 진행: {str(e)}", flush=True)
+                    return """[Environment]
+Due to temporary API service maintenance, detailed analysis is delayed. We are committed to robust environmental management including carbon reduction and waste minimization.
+
+[Social]
+To ensure non-stop service, this mock response is provided. Our social policy focuses on fair labor practices, safe working conditions, and active community engagement.
+
+[Governance]
+Our governance structure maintains transparency and accountability, ensuring compliance with global ESG standards despite temporary technical interruptions."""
+
+
+    async def translate_to_korean(self, text: str, company_name: str, industry: str = "", size: str = "") -> dict:
+        """
+        [ESG 심층 강화 분석 엔진]
+        1단계 영문 초안 기반으로 풍부한 한국어 ESG 심층 분석 보고서 생성.
+        반환: { 'translated_text': 표시용 전체 텍스트, 'structured': {env, social, gov} }
+        """
+        # 기관 정보 블록 생성
+        SIZE_MAP = {
+            "SME": "중소기업",
+            "Mid-Market": "중견기업",
+            "Enterprise": "대기업",
+            "NGO": "비영리기관",
+            "Other": "기타(그외)"
+        }
+        size_label = SIZE_MAP.get(size, size or "미지정")
+        header_block = f"기업(기관)명 : {company_name}\n기업(기관)형태 : {size_label}\n산업분류 : {industry or '산업'}\n\n"
+        # [Shield 1] 심층 분석에 필요한 핵심 세션만 추출 (환경, 사회, 거버넌스, 공시) - 토큰 소모의 주범이므로 제거
+        terms_guide = "반드시 최신 ESG 전문 용어(예: 탄소중립, 온실가스 배출량, 거버넌스, 다양성 및 포용성 등)를 사용하여 전문적인 비즈니스 문어체로 작성하십시오."
+
+        # [Shield 4] 정적 시스템 프롬프트 (캐싱 효율 극대화)
+        system_prompt = """당신은 국내 상위 1% ESG 평가기관 수석 컨설턴트입니다.
+제공된 영문 ESG 초안을 기반으로 심층 한국어 ESG 경영 보고서를 재작성하십시오.
+
+[절대 규칙]
+1. 한국어 비즈니스 문어체 사용 (~합니다, ~체계를 구축합니다).
+2. '지배구조' 금지 → 반드시 '거버넌스' 사용.
+3. [주어 생략 규칙] 도입부 외에는 주어(기업명)를 반드시 생략하여 가독성 확보.
+4. JSON 형식 100% 준수.
+
+[응답 JSON 스키마]
+{
+  "environment": {
+    "summary": "환경 영역 종합 헤드라인 (1문장)",
+    "activity": "주요 환경 활동 및 실천 체계 (상세, 5단락 이상)",
+    "plan": "향후 환경 계획 및 로드맵 (상세, 5단락 이상)",
+    "kpi": "환경 관리 지표 및 성과 측정 방향 (상세, 5단락 이상)"
+  },
+  "social": {
+    "summary": "사회 영역 종합 헤드라인 (1문장)",
+    "policy": "인사 복지 및 사회적 책임 정책 (상세, 5단락 이상)",
+    "safety": "안전 보건 관리 체계 (상세, 5단락 이상)",
+    "kpi": "사회 공헌 전략 및 KPI (상세, 5단락 이상)"
+  },
+  "governance": {
+    "summary": "거버넌스 영역 종합 헤드라인 (1문장)",
+    "system": "투명 경영 및 거버넌스 체계 (상세, 5단락 이상)",
+    "ethics": "윤리 경영 및 준법 기준 (상세, 5단락 이상)"
+  }
+}
+
+<ESG 전문 용어 및 리라이팅 지침 (Shield 1 - Optimized)>
+""" + terms_guide
+
+        # [Shield 4] 가변 데이터(기업명, 초안 텍스트)는 User Prompt로 배치
+        user_prompt = f"""Generate a detailed Korean ESG report for '{company_name}' based on the following draft:
+[Draft]
+{text}"""
+
+
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            try:
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.5
+                    ),
+                    timeout=90.0
+                )
+
+                res_content = response.choices[0].message.content.strip()
+                import json
+                structured = json.loads(res_content)
+
+                env = structured.get("environment", {})
+                soc = structured.get("social", {})
+                gov = structured.get("governance", {})
+
+                # Use triple quotes for display_text to avoid unterminated string literal
+                display_text = f"""{header_block}[환경 (Environment)]
+{env.get('summary', '')}
+
+{env.get('activity', '')}
+
+{env.get('plan', '')}
+
+{env.get('kpi', '')}
+
+[사회 (Social)]
+{soc.get('summary', '')}
+
+{soc.get('policy', '')}
+
+{soc.get('safety', '')}
+
+{soc.get('kpi', '')}
+
+[거버넌스 (Governance)]
+{gov.get('summary', '')}
+
+{gov.get('system', '')}
+
+{gov.get('ethics', '')}"""
+
+                print(f"[DEEP ANALYSIS] 완료 ({len(display_text)} chars)", flush=True)
+                return {"translated_text": display_text, "structured": structured}
+
+            except Exception as e:
+                if attempt < max_retries:
+                    print(f"[심층분석] Retry {attempt+1}: {e}", flush=True)
+                    await asyncio.sleep((attempt + 1) * 3)
+                else:
+                    print(f"[심층분석] 최종 실패, Fallback 적용: {e}", flush=True)
+                    
+                    # 기관 정보 매핑
+                    SIZE_MAP = {
+                        "SME": "중소기업", "Mid-Market": "중견기업", "Enterprise": "대기업", "NGO": "비영리기관", "Other": "기타(그외)"
+                    }
+                    s_label = SIZE_MAP.get(size, size or "미지정")
+                    
+                    fallback_text = f"""기업(기관)명 : {company_name}
+기업(기관)형태 : {s_label}
+산업분류 : {industry or '산업'}
+
+[환경 (Environment)]
+{company_name}은(는) {industry} 산업 분야의 환경적 책임을 다하기 위해 지속 가능한 비즈니스 전환을 최우선 과제로 삼고 있습니다. 당사는 기업 활동 전반에서 발생하는 온실가스 배출량을 정량적으로 측정하고, Scope 1 및 Scope 2 배출량을 체계적으로 감축하기 위한 장기 로드맵을 수립하였습니다. 특히 에너지 효율이 높은 설비 도입과 신재생 에너지 전환 비율을 확대하여 탄소 중립(Carbon Neutrality) 목표에 기여할 계획입니다.
+또한, 폐기물 발생을 최소화하기 위해 '생산-소비-폐기-재활용'으로 이어지는 자원 순환 체계를 강화하고 있습니다. 친환경 포장재 사용을 늘리고 사업장 내 일회용품 사용을 근절하는 생활 속 실천부터, 폐기물 재활용률을 연 단위로 모니터링하여 환경 영향 평가 지표(KPI)로 관리합니다. {company_name}은(는) 향후 협력사들의 친환경 전환을 지원하는 등 가치사슬(Value Chain) 전반에 걸친 녹색 경영을 실천해 나갈 것입니다.
+
+[사회 (Social)]
+{company_name}은(는) '사람 중심의 경영'을 바탕으로 임직원의 안전과 보건을 최우선으로 하는 작업 환경을 조성하고 있습니다. 중대재해 예방을 위한 정기적인 스마트 안전망 점검 및 산업 안전 보건 교육을 전 직원 대상으로 의무화하고 있으며, '무재해 사업장' 달성을 목표로 리스크 관리 체계를 고도화하고 있습니다. 나아가 양성평등 및 직장 내 다양성과 포용성(Diversity & Inclusion)을 존중하는 기업 문화를 정착시켜, 모든 임직원이 공정한 성과 보상과 자기 계발의 기회를 누릴 수 있도록 제도적 지원을 아끼지 않습니다.
+지역 사회와의 상생 또한 {company_name}의 핵심 가치입니다. 지역 취약계층 지원 사업, 인재 육성 프로그램 및 지역 경제 활성화를 위한 캠페인에 적극 참여하여 기업시민으로서의 사회적 책임을 다하고 있습니다. 공급망 관리 측면에서도 협력사의 인권, 노동, 안전 기준 준수를 권장하는 등 건전한 생태계 조성에 이바지하겠습니다.
+
+[거버넌스 (Governance)]
+{company_name}은(는) 투명하고 건전한 기업 지배구조 확립을 위해 이사회 중심의 책임 경영 체계를 운영하고 있습니다. 의사 결정 과정의 객관성과 독립성을 보장하기 위해 이해 상충 방지 가이드라인을 엄격히 적용하며, 주요 ESG 안건을 논의하고 심의하는 전담 기구 구성을 준비하고 있습니다. 이를 통해 {industry} 특성에 맞는 리스크 관리와 준법 경영(Compliance)을 실현하고 있습니다.
+윤리 경영 실천 역시 철저히 이행 중입니다. 전 임직원을 대상으로 한 반부패 및 청렴 교육을 정례화하고, 내부 고발자 보호 제도를 강화하여 부당 이익 취득이나 부정부패가 발생하지 않도록 사전 예방에 만전을 기하고 있습니다. {company_name}은(는) 앞으로도 글로벌 가이드라인에 부합하는 투명한 정보 공개를 통해 주주, 고객, 지역 사회 등 모든 이해관계자와 깊은 신뢰를 구축하며 성장해 나갈 것을 약속합니다."""
+
+                    return {
+                        "translated_text": fallback_text,
+                        "structured": {}
+                    }
+
+
+    async def refine_policies(self, company_name: str, industry: str, base_report: str, step2_data: dict) -> str:
+        """
+        [Phase 2] 1단계 초안과 2단계 필수/옵션 상세 정보를 합성하여
+        DeepSeek 엔진이 Docx 인쇄에 적합한 프리미엄 정밀 보고서를 작성하는 핵심 로직.
+        """
+        print(f"🔬 정밀 심층 맵핑 시작: {company_name}")
+        
+        # [Safety] step2_data가 None일 경우 방어 로직
+        if not step2_data:
+            step2_data = {}
+            
+        req_answers = step2_data.get("required") or {}
+        opt_answers = step2_data.get("options") or {}
+        
+        details = "\n[고객사 실제 현황 정보 (필수)]\n"
+        details += "\n".join([f"- {k}: {v}" for k, v in req_answers.items()])
+        
+        if opt_answers:
+            details += "\n\n[고객사 실제 현황 정보 (선택 포함)]\n"
+            details += "\n".join([f"- {k}: {v}" for k, v in opt_answers.items()])
+
+        # [Shield 1] 정밀 분석에 필요한 전체 용어셋 주입 (환경, 사회, 거버넌스, 공시, 실행) - 토큰 소모의 주범이므로 제거
+        terms_guide = "반드시 최신 ESG 전문 용어(예: 탄소중립, 온실가스 배출량, 거버넌스, 다양성 및 포용성 등)를 사용하여 전문적인 비즈니스 문어체로 작성하십시오."
+
+        # [Shield 4] 정적 시스템 프롬프트 (가변 데이터 제거로 캐싱 효율 극대화)
+        system_prompt = """당신은 글로벌 1등 ESG 평가기관의 수석 전략 컨설턴트입니다.
+제시된 실천 데이터와 초안을 융합하여 최종 C-Level 보고서 본문을 작성하십시오.
+
+[지침]
+1. 한국어 비즈니스 문어체로 10~15문장 이상의 풍부한 분량으로 서술.
+2. '지배구조' 대신 '거버넌스' 사용.
+3. 주어(기업명)는 문맥상 필요할 때만 사용하여 가독성 확보.
+4. JSON 형식 100% 준수 (Key는 영문, Value는 한국어).
+
+[응답 JSON 스키마]
+{
+  "company_intro": "기업(기관)의 개요, 설립 목적 및 미션 (3문장 내외)",
+  "key_products": "기업(기관)의 주요 제품, 서비스 또는 핵심 사업 부문 (요약)",
+  "locations": "국내외 주요 사업장 위치 또는 운영 현황 (요약)",
+  "esg_direction": "핵심 ESG 경영 철학 및 추진 방향 (1문장)",
+  "environment": {
+    "activity": "주요 환경 활동 및 실천 체계 (상세, 10문장 이상)",
+    "plan": "향후 환경 계획 및 로드맵 (상세, 10문장 이상)",
+    "kpi": "환경 관리 지표 및 성과 측정 방향 (상세, 10문장 이상)"
+  },
+  "social": {
+    "policy": "인사 복지 및 사회적 책임 정책 (상세, 10문장 이상)",
+    "safety": "안전 보건 관리 체계 (상세, 10문장 이상)",
+    "kpi": "사회 공헌 전략 및 KPI (상세, 10문장 이상)"
+  },
+  "governance": {
+    "system": "투명 경영 및 거버넌스 운영 체계 (상세, 10문장 이상)",
+    "ethics": "윤리 경영 및 준법 기준 (상세, 10문장 이상)"
+  }
+}
+
+<ESG 전문용어 및 프리미엄 리라이팅 지침 (Shield 1 - Optimized)>
+""" + terms_guide
+
+        # [Shield 4] 가변 데이터는 User Prompt로 배치
+        req_answers = (step2_data or {}).get("required") or {}
+        opt_answers = (step2_data or {}).get("options") or {}
+        details = "\n".join([f"- {k}: {v}" for k, v in {**req_answers, **opt_answers}.items()])
+
+        user_prompt = f"""[분석 대상 데이터]
+기업명: {company_name} / 산업: {industry}
+[1단계 초안]
+{base_report}
+[2단계 실천 데이터]
+{details}
+
+위 데이터를 융합하여 상기 JSON 스킹마에 맞춘 최상위 품질의 보고서를 완성하십시오."""
+
+        # [Shield 3] 지능형 호출 게이트: 복잡한 분석 필요 시 모델 분기 가능 (현재 기본 chat 유지)
+        selected_model = self.model
+        
+        try:
+            response = await asyncio.wait_for(
+                self.client.chat.completions.create(
+                    model=selected_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.6,
+                    max_tokens=4000, # [Shield 5] 토큰 상한 제어
+                    response_format={"type": "json_object"}
+                ),
+                timeout=120.0
+            )
+            content = response.choices[0].message.content.strip()
+
+            
+            # JSON 외의 불필요한 마크다운 백틱 등이 있다면 정제
+            import re
+            content = re.sub(r'```json', '', content)
+            content = re.sub(r'```', '', content).strip()
+            
+            return content
+        except Exception as e:
+            import traceback
+            err_msg = traceback.format_exc()
+            print(f"[REFINE ERROR] Traceback: {err_msg}", flush=True)
+            fallback_json = {
+                "company_intro": "API 한도 초과로 인한 대체 제공 보고서. 신뢰도 높은 ESG 경영 비전을 구축해 나아갑니다.",
+                "key_products": "이해관계자를 고려한 전문 서비스/제품 제공",
+                "locations": "대한민국 및 글로벌 사업장 등",
+                "esg_direction": "환경, 사회, 투명 지배구조 중심의 책임 경영 선도",
+                "environment": {
+                    "activity": "사업장 내 폐기물 절감 및 에너지 효율 향상 시스템 구축.",
+                    "plan": "오는 하반기부터 탄소 배출 저감 로드맵 수립 및 실천.",
+                    "kpi": "전력 사용량 감축률(%), 폐기물 재활용률(%)"
+                },
+                "social": {
+                    "policy": "양성평등 채용 및 공정한 성과 보상 체계 유지, 지속적인 지역사회 기부.",
+                    "safety": "사업장 내 중대재해 Zero 달성을 위해 정기 안전 보건 교육 확대 시행.",
+                    "kpi": "안전보건 교육 이수율(%), 직원 이직률(%) 방어율"
+                },
+                "governance": {
+                    "system": "전문성 및 다양성을 갖춘 이사회 구성, 주요 ESG 안건에 대한 의결 절차 강화.",
+                    "ethics": "전사적 반부패 위반행위 제재 및 윤리 규범 실천 서약 100% 준수."
+                }
+            }
+            return json.dumps(fallback_json, ensure_ascii=False)
