@@ -59,6 +59,8 @@ async def startup_event():
                 consent_required INTEGER DEFAULT 1,
                 consent_marketing INTEGER DEFAULT 0,
                 source TEXT,
+                stage3_data TEXT,
+                report_content TEXT,
                 created_at TEXT
             )
         """)
@@ -91,6 +93,7 @@ class LeadRequest(BaseModel):
     consent_required: bool = True
     consent_marketing: bool = False
     source: str = "download"
+    stage3_data: Optional[str] = None
 
     @validator('email')
     def validate_email(cls, v):
@@ -343,11 +346,23 @@ async def download_report(job_id: str, fmt: str):
 @app.post("/api/leads")
 async def save_lead(req: LeadRequest):
     try:
+        # 1. Redis에서 Stage 3 데이터 (사용자 자가진단 답변) 추출 시도
+        user_input = None
+        if req.job_id:
+            try:
+                # req_data:{job_id} 키에 저장된 정보를 가져옴
+                raw_input = await redis_mgr.client.get(f"{redis_mgr.NS_REQ_DATA}{req.job_id}")
+                if raw_input:
+                    user_input = raw_input
+                    print(f"[API] Stage 3 data found for {req.job_id}", flush=True)
+            except Exception as re:
+                print(f"[API] Redis fetch error: {re}", flush=True)
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO leads (name, company, phone, email, job_id, consent_required, consent_marketing, source, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO leads (name, company, phone, email, job_id, consent_required, consent_marketing, source, stage3_data, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             req.name,
             req.company,
@@ -357,6 +372,8 @@ async def save_lead(req: LeadRequest):
             1 if req.consent_required else 0,
             1 if req.consent_marketing else 0,
             req.source,
+            user_input or req.stage3_data,
+            await redis_mgr.client.get(f"{redis_mgr.NS_RESULT}{req.job_id}") if req.job_id else None,
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
         conn.commit()
@@ -366,6 +383,21 @@ async def save_lead(req: LeadRequest):
     except Exception as e:
         print(f"[API] Error saving lead: {e}", flush=True)
         raise HTTPException(status_code=500, detail="리드 정보를 저장하는 데 실패했습니다.")
+
+@app.get("/api/admin/leads")
+async def get_leads_admin():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM leads ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+        leads = [dict(r) for r in rows]
+        conn.close()
+        return leads
+    except Exception as e:
+        print(f"[API] Admin error: {e}", flush=True)
+        raise HTTPException(status_code=500, detail="리드 목록을 불러오지 못했습니다.")
 
 if __name__ == "__main__":
     import uvicorn

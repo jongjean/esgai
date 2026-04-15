@@ -104,6 +104,17 @@ async def save_lead(data: dict):
             logger.error(f"Error in /leads relay: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/admin/leads")
+async def get_leads_admin():
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.get(f"{ENGINE_URL}/api/admin/leads")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error in /admin/leads relay: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/download/{job_id}/{file_type}")
 async def download_file(job_id: str, file_type: str, company: str = "ESG_Report"):
     async with httpx.AsyncClient(timeout=120.0) as client:
