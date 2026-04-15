@@ -31,3 +31,4 @@ tables_out.txt
 .idea/
 .DS_Store
 Thumbs.db
+*.db

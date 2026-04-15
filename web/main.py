@@ -104,7 +104,7 @@ async def save_lead(data: dict):
             logger.error(f"Error in /leads relay: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/admin/leads")
+@app.get("/admin/leads")
 async def get_leads_admin():
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
